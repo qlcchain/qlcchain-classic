@@ -378,6 +378,18 @@ std::string rai::stat::detail_to_string (uint32_t key)
 		case rai::stat::detail::frontier_req:
 			res = "frontier_req";
 			break;
+		//QLINK
+		case rai::stat::detail::smart_contract_req:
+			res = "smart_contract_req";
+			break;
+		//QLINK
+		case rai::stat::detail::smart_contract:
+			res = "smart_contract";
+			break;
+		//QLINK
+		case rai::stat::detail::smart_contract_ack:
+			res = "smart_contract_ack";
+			break;
 		case rai::stat::detail::handshake:
 			res = "handshake";
 			break;
@@ -407,6 +419,9 @@ std::string rai::stat::detail_to_string (uint32_t key)
 			break;
 		case rai::stat::detail::state_block:
 			res = "state_block";
+			break;
+		case rai::stat::detail::smart_contract_block:
+			res = "smart_contract_block";
 			break;
 		case rai::stat::detail::vote_valid:
 			res = "vote_valid";

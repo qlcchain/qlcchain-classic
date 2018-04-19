@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <blake2/blake2.h>
+#include <boost/asio/buffer.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <streambuf>
 
@@ -11,6 +12,8 @@ namespace rai
 {
 std::string to_string_hex (uint64_t);
 bool from_string_hex (std::string const &, uint64_t &);
+std::string stream_to_string_hex (std::vector<uint8_t> const &);
+std::vector<uint8_t> hex_string_to_stream (std::string const &);
 // We operate on streams of uint8_t by convention
 using stream = std::basic_streambuf<uint8_t>;
 // Read a raw byte stream the size of `T' and fill value.
@@ -37,7 +40,9 @@ enum class block_type : uint8_t
 	receive = 3,
 	open = 4,
 	change = 5,
-	state = 6
+	state = 6,
+	// 智能合约
+	smart_contract = 7
 };
 class block
 {
@@ -235,7 +240,7 @@ public:
 class state_hashables
 {
 public:
-	state_hashables (rai::account const &, rai::block_hash const &, rai::account const &, rai::amount const &, rai::uint256_union const &);
+	state_hashables (rai::account const &, rai::block_hash const &, rai::account const &, rai::amount const &, rai::uint256_union const &, rai::block_hash const &);
 	state_hashables (bool &, rai::stream &);
 	state_hashables (bool &, boost::property_tree::ptree const &);
 	void hash (blake2b_state &) const;
@@ -253,11 +258,13 @@ public:
 	rai::amount balance;
 	// Link field contains source block_hash if receiving, destination account if sending
 	rai::uint256_union link;
+	// 智能合约类型
+	rai::block_hash token_hash;
 };
 class state_block : public rai::block
 {
 public:
-	state_block (rai::account const &, rai::block_hash const &, rai::account const &, rai::amount const &, rai::uint256_union const &, rai::raw_key const &, rai::public_key const &, uint64_t);
+	state_block (rai::account const &, rai::block_hash const &, rai::account const &, rai::amount const &, rai::uint256_union const &, rai::block_hash const &, rai::raw_key const &, rai::public_key const &, uint64_t);
 	state_block (bool &, rai::stream &);
 	state_block (bool &, boost::property_tree::ptree const &);
 	virtual ~state_block () = default;
@@ -268,6 +275,7 @@ public:
 	rai::block_hash previous () const override;
 	rai::block_hash source () const override;
 	rai::block_hash root () const override;
+	rai::block_hash token_type () const;
 	rai::account representative () const override;
 	void serialize (rai::stream &) const override;
 	void serialize_json (std::string &) const override;
@@ -284,7 +292,84 @@ public:
 	rai::state_hashables hashables;
 	rai::signature signature;
 	uint64_t work;
+	// FXIME: 存储智能合约产生数据
+	// std::map<std::string,std::string> asserts;
 };
+
+class smart_contract_hashables
+{
+public:
+	smart_contract_hashables (rai::account const &, rai::account const &, std::vector<uint8_t> const &);
+
+	smart_contract_hashables (bool & error_a, rai::stream & stream_a)
+	{
+		deserialize (error_a, stream_a);
+	}
+
+	smart_contract_hashables (bool & error_a, boost::property_tree::ptree const & tree_a)
+	{
+		deserialize_json (error_a, tree_a);
+	}
+
+	void serialize (rai::stream &) const;
+	void serialize_json (boost::property_tree::ptree &) const;
+	void deserialize (bool &, rai::stream &);
+	void deserialize_json (bool &, boost::property_tree::ptree const &);
+	void hash (blake2b_state &) const;
+	rai::block_hash hash_abi () const;
+	// 智能合约 account
+	rai::account sc_account;
+	// 智能合约 owner
+	rai::account sc_owner_account;
+	// 智能合约 ABI
+	std::vector<uint8_t> abi;
+	// 智能合约 ABI 长度
+	rai::amount abi_length;
+	// 智能合约 ABI hash
+	rai::block_hash abi_hash;
+};
+
+/**
+ * 智能合约 block
+ */
+//AUTHOR: goreng
+class smart_contract_block : public rai::block
+{
+public:
+	smart_contract_block ();
+	smart_contract_block (rai::account const &, rai::account const &, std::vector<uint8_t> const &, rai::raw_key const &, rai::public_key const &, uint64_t);
+	smart_contract_block (bool &, rai::stream &);
+	smart_contract_block (bool &, boost::property_tree::ptree const &);
+	virtual ~smart_contract_block () = default;
+
+	using rai::block::hash;
+	void hash (blake2b_state &) const override;
+	rai::signature block_signature () const override;
+	void signature_set (rai::uint512_union const &) override;
+	bool operator== (rai::block const &) const override;
+	bool operator== (rai::smart_contract_block const &) const;
+
+	void serialize (rai::stream &) const override;
+	void serialize_json (std::string &) const override;
+	bool deserialize (rai::stream &);
+	bool deserialize_json (boost::property_tree::ptree const &);
+	void visit (rai::block_visitor &) const override;
+
+	uint64_t block_work () const override;
+	void block_work_set (uint64_t) override;
+	rai::block_hash previous () const override;
+	rai::block_hash source () const override;
+	rai::block_hash root () const override;
+	// ignore
+	rai::account representative () const override;
+	rai::block_type type () const override;
+	bool valid_predecessor (rai::block const &) const override;
+	rai::smart_contract_hashables hashables;
+	// sc_account 签名
+	rai::signature signature;
+	uint64_t work;
+};
+
 class block_visitor
 {
 public:
@@ -293,6 +378,7 @@ public:
 	virtual void open_block (rai::open_block const &) = 0;
 	virtual void change_block (rai::change_block const &) = 0;
 	virtual void state_block (rai::state_block const &) = 0;
+	virtual void smart_contract_block (rai::smart_contract_block const &) = 0;
 	virtual ~block_visitor () = default;
 };
 std::unique_ptr<rai::block> deserialize_block (rai::stream &);

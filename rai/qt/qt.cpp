@@ -555,6 +555,11 @@ public:
 			amount = balance - previous_balance;
 		}
 	}
+
+	// TODO: 智能合约信息显示
+	void smart_contract_block (rai::smart_contract_block const &) override
+	{
+	}
 	MDB_txn * transaction;
 	rai::ledger & ledger;
 	std::string type;
@@ -1072,7 +1077,8 @@ void rai_qt::wallet::start ()
 								this_l->node.background ([this_w, account_l, actual]() {
 									if (auto this_l = this_w.lock ())
 									{
-										this_l->wallet_m->send_async (this_l->account, account_l, actual, [this_w](std::shared_ptr<rai::block> block_a) {
+										// FIXME: 根据 UI 获取 token_hash
+										this_l->wallet_m->send_async (this_l->account, account_l, rai::block_hash (0), actual, [this_w](std::shared_ptr<rai::block> block_a) {
 											if (auto this_l = this_w.lock ())
 											{
 												auto succeeded (block_a != nullptr);

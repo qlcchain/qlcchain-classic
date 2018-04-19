@@ -463,6 +463,9 @@ public:
 	rai::observer_set<rai::endpoint const &> endpoint;
 	rai::observer_set<> disconnect;
 	rai::observer_set<> started;
+	// FIXME: params
+	// AUTHOR: goreng
+	rai::observer_set<> account_changed;
 };
 class vote_processor
 {
@@ -582,6 +585,8 @@ public:
 	static std::chrono::seconds constexpr period = std::chrono::seconds (60);
 	static std::chrono::seconds constexpr cutoff = period * 5;
 	static std::chrono::minutes constexpr backup_interval = std::chrono::minutes (5);
+	//QLINK
+	std::deque<std::shared_ptr<rai::smart_contract_block>> sc_blocks;
 };
 class thread_runner
 {

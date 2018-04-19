@@ -1,3 +1,4 @@
+#include <boost/log/trivial.hpp>
 #include <queue>
 #include <rai/blockstore.hpp>
 #include <rai/versioning.hpp>
@@ -47,6 +48,17 @@ public:
 		if (!block_a.previous ().is_zero ())
 		{
 			fill_value (block_a);
+		}
+	}
+	// FIXME: 更新智能合约 block predecessor
+	void smart_contract_block (rai::smart_contract_block const & block_a) override
+	{
+		if (!store.abi_exists (transaction, block_a.hashables.abi_hash))
+		{
+			if (store.abi_put (transaction, block_a.hashables.abi_hash))
+			{
+				fill_value (block_a);
+			}
 		}
 	}
 	MDB_txn * transaction;
@@ -251,7 +263,11 @@ pending (0),
 blocks_info (0),
 representation (0),
 unchecked (0),
-checksum (0)
+checksum (0),
+token_accounts (0),
+smart_contract (0),
+assets (0),
+abi (0)
 {
 	if (!error_a)
 	{
@@ -270,6 +286,10 @@ checksum (0)
 		error_a |= mdb_dbi_open (transaction, "checksum", MDB_CREATE, &checksum) != 0;
 		error_a |= mdb_dbi_open (transaction, "vote", MDB_CREATE, &vote) != 0;
 		error_a |= mdb_dbi_open (transaction, "meta", MDB_CREATE, &meta) != 0;
+		error_a |= mdb_dbi_open (transaction, "token_accounts", MDB_CREATE, &token_accounts) != 0;
+		error_a |= mdb_dbi_open (transaction, "assets", MDB_CREATE, &assets) != 0;
+		error_a |= mdb_dbi_open (transaction, "smart_contract", MDB_CREATE, &smart_contract) != 0;
+		error_a |= mdb_dbi_open (transaction, "abi", MDB_CREATE, &abi) != 0;
 		if (!error_a)
 		{
 			do_upgrades (transaction);
@@ -574,6 +594,8 @@ MDB_dbi rai::block_store::block_database (rai::block_type type_a)
 		case rai::block_type::state:
 			result = state_blocks;
 			break;
+		case rai::block_type::smart_contract:
+			result = smart_contract;
 		default:
 			assert (false);
 			break;
@@ -625,7 +647,16 @@ MDB_val rai::block_store::block_get_raw (MDB_txn * transaction_a, rai::block_has
 					assert (status == 0 || status == MDB_NOTFOUND);
 					if (status != 0)
 					{
-						// Block not found
+						auto status (mdb_get (transaction_a, smart_contract, rai::mdb_val (hash_a), result));
+						assert (status == 0 || status == MDB_NOTFOUND);
+						if (status != 0)
+						{
+							// Block not found
+						}
+						else
+						{
+							type_a = rai::block_type::smart_contract;
+						}
 					}
 					else
 					{
@@ -766,6 +797,18 @@ void rai::block_store::block_del (MDB_txn * transaction_a, rai::block_hash const
 				{
 					auto status (mdb_del (transaction_a, change_blocks, rai::mdb_val (hash_a), nullptr));
 					assert (status == 0);
+					// FXIME: remove smart contract block??
+					if (status != 0)
+					{
+						auto block (block_get (transaction_a, hash_a));
+						if (block != nullptr)
+						{
+							auto status (mdb_del (transaction_a, smart_contract, rai::mdb_val (hash_a), nullptr));
+							assert (status == 0);
+							auto abi_hash = static_cast<smart_contract_block *> (block.get ())->hashables.abi_hash;
+							abi_del (transaction_a, abi_hash);
+						}
+					}
 				}
 			}
 		}
@@ -799,6 +842,12 @@ bool rai::block_store::block_exists (MDB_txn * transaction_a, rai::block_hash co
 					auto status (mdb_get (transaction_a, state_blocks, rai::mdb_val (hash_a), junk));
 					assert (status == 0 || status == MDB_NOTFOUND);
 					exists = status == 0;
+					if (!exists)
+					{
+						auto status (mdb_get (transaction_a, smart_contract, rai::mdb_val (hash_a), junk));
+						assert (status == 0 || status == MDB_NOTFOUND);
+						exists = status == 0;
+					}
 				}
 			}
 		}
@@ -824,11 +873,15 @@ rai::block_counts rai::block_store::block_count (MDB_txn * transaction_a)
 	MDB_stat state_stats;
 	auto status5 (mdb_stat (transaction_a, state_blocks, &state_stats));
 	assert (status5 == 0);
+	MDB_stat smart_contract_stats;
+	auto status6 (mdb_stat (transaction_a, smart_contract, &smart_contract_stats));
+	assert (status6 == 0);
 	result.send = send_stats.ms_entries;
 	result.receive = receive_stats.ms_entries;
 	result.open = open_stats.ms_entries;
 	result.change = change_stats.ms_entries;
 	result.state = state_stats.ms_entries;
+	result.smart_contract = smart_contract_stats.ms_entries;
 	return result;
 }
 
@@ -837,22 +890,143 @@ bool rai::block_store::root_exists (MDB_txn * transaction_a, rai::uint256_union 
 	return block_exists (transaction_a, root_a) || account_exists (transaction_a, root_a);
 }
 
-void rai::block_store::account_del (MDB_txn * transaction_a, rai::account const & account_a)
+void rai::block_store::account_del (MDB_txn * transaction_a, rai::account const & token_account_a)
 {
-	auto status (mdb_del (transaction_a, accounts, rai::mdb_val (account_a), nullptr));
+	rai::account_info info;
+	auto flag = account_get (transaction_a, token_account_a, info);
+	if (flag)
+	{
+		std::vector<rai::account_info> infos;
+		flag = accounts_get (transaction_a, info.account, infos);
+		if (flag && !infos.empty ())
+			infos.erase (std::remove_if (infos.begin (), infos.end (),
+			             [token_account_a](const account_info info) { return info.open_block == token_account_a; }),
+			infos.end ());
+		flag = accounts_put (transaction_a, info.account, infos);
+		assert (flag == true);
+	}
+
+	auto status (mdb_del (transaction_a, token_accounts, rai::mdb_val (token_account_a), nullptr));
 	assert (status == 0);
 }
 
-bool rai::block_store::account_exists (MDB_txn * transaction_a, rai::account const & account_a)
+bool rai::block_store::abi_put (MDB_txn * transaction_a, rai::block_hash const & hash_a)
 {
-	auto iterator (latest_begin (transaction_a, account_a));
-	return iterator != rai::store_iterator (nullptr) && rai::account (iterator->first.uint256 ()) == account_a;
+	auto status (mdb_put (transaction_a, abi, rai::mdb_val (hash_a), nullptr, 0));
+	return (status == 0);
 }
 
-bool rai::block_store::account_get (MDB_txn * transaction_a, rai::account const & account_a, rai::account_info & info_a)
+void rai::block_store::abi_del (MDB_txn * transaction_a, rai::block_hash const & hash_a)
+{
+	auto status (mdb_del (transaction_a, abi, rai::mdb_val (hash_a), nullptr));
+	assert (status == 0 || status == MDB_NOTFOUND);
+}
+
+void rai::block_store::accounts_del (MDB_txn * transaction_a, rai::account const & account_a)
+{
+	std::vector<rai::account_info> infos;
+	auto flag (accounts_get (transaction_a, account_a, infos));
+	if (flag && !infos.empty ())
+	{
+		for (auto & info : infos)
+		{
+			account_del (transaction_a, info.open_block);
+		}
+	}
+	auto status (mdb_del (transaction_a, assets, rai::mdb_val (account_a), nullptr));
+	assert (status == 0);
+}
+
+bool rai::block_store::accounts_get (MDB_txn * transaction_a, rai::account const & account_a, std::vector<rai::account_info> & infos_a)
 {
 	rai::mdb_val value;
 	auto status (mdb_get (transaction_a, accounts, rai::mdb_val (account_a), value));
+	assert (status == 0 || status == MDB_NOTFOUND);
+	bool result;
+	if (status == MDB_NOTFOUND)
+	{
+		result = true;
+	}
+	else
+	{
+		rai::bufferstream stream (reinterpret_cast<uint8_t const *> (value.data ()), value.size ());
+		const auto size (value.size () / sizeof (rai::block_hash));
+		assert (size > 0);
+		infos_a.clear ();
+		rai::block_hash token_account;
+		for (auto i = 0; i < size; ++i)
+		{
+			auto flag (rai::read (stream, token_account));
+			if (!flag)
+				continue;
+
+			rai::account_info info;
+			flag = account_get (transaction_a, token_account, info);
+			if (flag)
+			{
+				infos_a.push_back (info);
+			}
+		}
+	}
+	return result;
+}
+
+bool rai::block_store::accounts_get_first (MDB_txn * transaction_a, rai::account const & account_a, rai::account_info & info_a)
+{
+	auto result (true);
+	std::vector<rai::account_info> infos;
+	if (!accounts_get (transaction_a, account_a, infos) && !infos.empty ())
+	{
+		info_a = infos.front ();
+		result = false;
+	}
+	return result;
+}
+
+bool rai::block_store::accounts_get (MDB_txn * transaction_a, rai::account const & account_a, rai::block_hash const & token_hash_a,
+rai::account_info & info_a)
+{
+	std::vector<rai::account_info> infos;
+	auto result (true);
+
+	if (!accounts_get (transaction_a, account_a, infos))
+	{
+		auto it = std::find_if (infos.begin (), infos.end (), [&token_hash_a](const rai::account_info & info) {
+			return info.token_type == token_hash_a;
+		});
+		if (it != std::end (infos))
+		{
+			info_a = *it;
+			result = false;
+		}
+	}
+	return result;
+}
+
+bool rai::block_store::accounts_put (MDB_txn * transaction_a, rai::account const & account_a, std::vector<rai::account_info> const & infos_a)
+{
+	std::vector<uint8_t> vector;
+	{
+		rai::vectorstream stream (vector);
+		for (auto & info : infos_a)
+		{
+			rai::write (stream, info.open_block);
+		}
+	}
+	auto status (mdb_put (transaction_a, accounts, rai::mdb_val (account_a), rai::mdb_val (vector.size (), vector.data ()), 0));
+	return status == 0;
+}
+
+bool rai::block_store::account_exists (MDB_txn * transaction_a, rai::account const & token_account_a)
+{
+	auto iterator (latest_begin (transaction_a, token_account_a));
+	return iterator != rai::store_iterator (nullptr) && rai::account (iterator->first.uint256 ()) == token_account_a;
+}
+
+bool rai::block_store::account_get (MDB_txn * transaction_a, rai::account const & token_account_a, rai::account_info & info_a)
+{
+	rai::mdb_val value;
+	auto status (mdb_get (transaction_a, token_accounts, rai::mdb_val (token_account_a), value));
 	assert (status == 0 || status == MDB_NOTFOUND);
 	bool result;
 	if (status == MDB_NOTFOUND)
@@ -866,6 +1040,38 @@ bool rai::block_store::account_get (MDB_txn * transaction_a, rai::account const 
 		assert (!result);
 	}
 	return result;
+}
+
+void rai::block_store::assets_put (MDB_txn * transaction_a, rai::asset_key const & key_a, rai::asset_value const & asset_a)
+{
+	auto status (mdb_put (transaction_a, assets, key_a.val (), asset_a.val (), 0));
+	assert (status == 0);
+}
+
+bool rai::block_store::assets_get (MDB_txn * transaction_a, rai::asset_key const & key_a, rai::asset_value & asset_a)
+{
+	rai::mdb_val value;
+	auto status (mdb_get (transaction_a, assets, key_a.val (), value));
+	assert (status == 0 || status == MDB_NOTFOUND);
+	bool result;
+	if (status == MDB_NOTFOUND)
+	{
+		result = true;
+	}
+	else
+	{
+		result = false;
+		rai::bufferstream stream (reinterpret_cast<uint8_t const *> (value.data ()), value.size ());
+		asset_a.deserialize (stream);
+		assert (asset_a.value_length == asset_a.value.size ());
+	}
+	return result;
+}
+
+void rai::block_store::assets_delete (MDB_txn * transaction_a, rai::asset_key const & key_a)
+{
+	auto status (mdb_del (transaction_a, assets, key_a.val (), nullptr));
+	assert (status == 0);
 }
 
 void rai::block_store::frontier_put (MDB_txn * transaction_a, rai::block_hash const & block_a, rai::account const & account_a)
@@ -902,9 +1108,23 @@ size_t rai::block_store::account_count (MDB_txn * transaction_a)
 	return result;
 }
 
-void rai::block_store::account_put (MDB_txn * transaction_a, rai::account const & account_a, rai::account_info const & info_a)
+bool rai::block_store::abi_exists (MDB_txn * transaction_a, rai::block_hash const & block_hash_a)
 {
-	auto status (mdb_put (transaction_a, accounts, rai::mdb_val (account_a), info_a.val (), 0));
+	rai::mdb_val junk;
+	auto status (mdb_get (transaction_a, abi, rai::mdb_val (block_hash_a), junk));
+	return (status == 0);
+}
+
+void rai::block_store::account_put (MDB_txn * transaction_a, rai::account const & token_account_a, rai::account_info const & info_a)
+{
+	std::vector<rai::account_info> infos;
+	accounts_get (transaction_a, info_a.account, infos);
+	// TODO: check if exist ??
+	infos.push_back (info_a);
+	auto flag (accounts_put (transaction_a, info_a.account, infos));
+	assert (flag);
+
+	auto status (mdb_put (transaction_a, token_accounts, rai::mdb_val (token_account_a), info_a.val (), 0));
 	assert (status == 0);
 }
 
@@ -1241,13 +1461,13 @@ std::shared_ptr<rai::vote> rai::block_store::vote_max (MDB_txn * transaction_a, 
 
 rai::store_iterator rai::block_store::latest_begin (MDB_txn * transaction_a, rai::account const & account_a)
 {
-	rai::store_iterator result (transaction_a, accounts, rai::mdb_val (account_a));
+	rai::store_iterator result (transaction_a, token_accounts, rai::mdb_val (account_a));
 	return result;
 }
 
 rai::store_iterator rai::block_store::latest_begin (MDB_txn * transaction_a)
 {
-	rai::store_iterator result (transaction_a, accounts);
+	rai::store_iterator result (transaction_a, token_accounts);
 	return result;
 }
 

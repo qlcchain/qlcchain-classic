@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 #include <blake2/blake2.h>
+#include <boost/multi_index/hashed_index.hpp>
 
 namespace boost
 {
@@ -41,6 +42,11 @@ public:
 	void open_block (rai::open_block const &) override;
 	void change_block (rai::change_block const &) override;
 	void state_block (rai::state_block const &) override;
+
+	void smart_contract_block (rai::smart_contract_block const &) override
+	{
+	}
+
 	MDB_txn * transaction;
 	rai::block_store & store;
 	rai::block_hash current_balance;
@@ -63,6 +69,11 @@ public:
 	void change_block (rai::change_block const &) override;
 	void state_block (rai::state_block const &) override;
 	void from_send (rai::block_hash const &);
+
+	void smart_contract_block (rai::smart_contract_block const &) override
+	{
+	}
+
 	MDB_txn * transaction;
 	rai::block_store & store;
 	rai::block_hash current_amount;
@@ -84,6 +95,11 @@ public:
 	void open_block (rai::open_block const & block_a) override;
 	void change_block (rai::change_block const & block_a) override;
 	void state_block (rai::state_block const & block_a) override;
+
+	void smart_contract_block (rai::smart_contract_block const &) override
+	{
+	}
+
 	MDB_txn * transaction;
 	rai::block_store & store;
 	rai::block_hash current;
@@ -124,12 +140,17 @@ public:
 	rai::block_hash rep_block;
 	rai::block_hash open_block;
 	rai::amount balance;
+	// 智能合约类型
+	rai::block_hash token_type;
+	// Token 归属 account
+	rai::account account;
 	/** Seconds since posix epoch */
 	uint64_t modified;
 	uint64_t block_count;
 };
 
 /**
+ * Latest information about an account
  * Information on an uncollected send
  */
 class pending_info
@@ -144,6 +165,8 @@ public:
 	rai::mdb_val val () const;
 	rai::account source;
 	rai::amount amount;
+	//Token 类型，sc hash
+	rai::block_hash token_type;
 };
 class pending_key
 {
@@ -156,6 +179,59 @@ public:
 	rai::mdb_val val () const;
 	rai::account account;
 	rai::block_hash hash;
+};
+
+/**
+ * 资产状态
+ */
+enum track_state
+{
+	none,
+	added,
+	changed,
+	deleted
+};
+
+/**
+ * 资产键，包含智能合约账号及资产 Id
+ */
+class asset_key
+{
+public:
+	asset_key (rai::account const &, boost::asio::mutable_buffer const &);
+	asset_key (MDB_val const &);
+	rai::mdb_val val () const;
+	size_t len () const;
+	void serialize (rai::stream &) const;
+	bool deserialize (rai::stream &);
+	bool operator== (rai::asset_key const &) const;
+	// 资产Id，byte array
+	boost::asio::mutable_buffer key;
+	// 资产Id 长度
+	rai::amount key_length;
+	// 智能合约账号
+	rai::account sc_account;
+};
+
+/**
+ * 资产值及状态
+ */
+class asset_value
+{
+public:
+	asset_value (boost::asio::mutable_buffer const &, track_state const &);
+	asset_value (MDB_val const &);
+	rai::mdb_val val () const;
+	size_t len () const;
+	void serialize (rai::stream &) const;
+	bool deserialize (rai::stream &);
+	bool operator== (rai::asset_value const &) const;
+	// 资产Id 对应的值， byte array
+	boost::asio::mutable_buffer value;
+	// 资产Id 对应的值 长度
+	rai::amount value_length;
+	//资产状态
+	rai::track_state state;
 };
 class block_info
 {
@@ -180,6 +256,7 @@ public:
 	size_t open;
 	size_t change;
 	size_t state;
+	size_t smart_contract;
 };
 class vote
 {
@@ -225,7 +302,11 @@ enum class process_result
 	gap_source, // Block marked as source is unknown
 	opened_burn_account, // The impossible happened, someone found the private key associated with the public key '0'.
 	balance_mismatch, // Balance and amount delta don't match
-	block_position // This block cannot follow the previous block
+	block_position, // This block cannot follow the previous block
+	sc_account_mismatch, // 智能合约账号不存在
+	abi_mismatch, // 智能合约 abi hash 不正确
+	abi_already_exist, // 合约 abi 已经存在
+	gap_smart_contract // 调用合约 block 不存在
 };
 class process_return
 {

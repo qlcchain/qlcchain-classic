@@ -476,6 +476,120 @@ bool rai::bulk_pull::deserialize (rai::stream & stream_a)
 	return result;
 }
 
+//QLINK
+rai::smart_contract_req::smart_contract_req () :
+message (rai::message_type::smart_contract_req)
+{
+}
+
+//QLINK
+bool rai::smart_contract_req::deserialize (rai::stream & stream_a)
+{
+	auto result (read_header (stream_a, version_max, version_using, version_min, type, extensions));
+	assert (!result);
+	assert (rai::message_type::smart_contract_req == type);
+	if (!result)
+	{
+		assert (type == rai::message_type::smart_contract_req);
+		result = read (stream_a, token_type);
+	}
+	return result;
+}
+
+void rai::smart_contract_req::serialize (rai::stream & stream_a)
+{
+	write_header (stream_a);
+	write (stream_a, token_type);
+}
+
+void rai::smart_contract_req::visit (rai::message_visitor & visitor_a) const
+{
+	visitor_a.smart_contract_req (*this);
+}
+
+rai::smart_contract_msg::smart_contract_msg () :
+message (rai::message_type::smart_contract)
+{
+}
+
+rai::smart_contract_msg::smart_contract_msg (std::shared_ptr<rai::smart_contract_block> block_a) :
+message (rai::message_type::smart_contract),
+len (sizeof (rai::account) + sizeof (rai::account) + block_a->hashables.abi_length.number () + sizeof (rai::amount) + sizeof (rai::block_hash) + sizeof (rai::signature) + sizeof (uint64_t)),
+smart_contract (block_a)
+{
+	block_type_set (smart_contract->type ());
+}
+
+bool rai::smart_contract_msg::deserialize (rai::stream & stream_a)
+{
+	auto result (read_header (stream_a, version_max, version_using, version_min, type, extensions));
+	assert (!result);
+	assert (type == rai::message_type::smart_contract);
+	if (!result)
+	{
+		//assert (type == rai::message_type::smart_contract);
+		result = read (stream_a, len);
+		if (!result)
+		{
+			//QLINK
+			auto block (rai::deserialize_block (stream_a, block_type ()));
+			auto sc_block (dynamic_cast<rai::smart_contract_block *> (block.get ()));
+			std::shared_ptr<rai::smart_contract_block> sc_block_1 (sc_block);
+			smart_contract = sc_block_1;
+			result = smart_contract == nullptr;
+		}
+	}
+	return result;
+}
+
+void rai::smart_contract_msg::serialize (rai::stream & stream_a)
+{
+	assert (block_type () == rai::block_type::smart_contract);
+	write_header (stream_a);
+	write (stream_a, len);
+	smart_contract->serialize (stream_a);
+}
+
+void rai::smart_contract_msg::visit (rai::message_visitor & visitor_a) const
+{
+	visitor_a.smart_contract (*this);
+}
+
+rai::smart_contract_ack::smart_contract_ack (smart_contract_result const & result_a) :
+message (rai::message_type::smart_contract_ack)
+{
+	result = result_a;
+}
+
+bool rai::smart_contract_ack::deserialize (rai::stream & stream_a)
+{
+	auto result_1 (read_header (stream_a, version_max, version_using, version_min, type, extensions));
+	assert (!result_1);
+	assert (rai::message_type::smart_contract_ack == type);
+	if (!result_1)
+	{
+		assert (type == rai::message_type::smart_contract_ack);
+		result_1 = read (stream_a, result);
+	}
+	return result_1;
+}
+
+void rai::smart_contract_ack::serialize (rai::stream & stream_a)
+{
+	write_header (stream_a);
+	write (stream_a, result);
+}
+
+void rai::smart_contract_ack::visit (rai::message_visitor & visitor_a) const
+{
+	visitor_a.smart_contract_ack (*this);
+}
+
+bool rai::smart_contract_ack::operator== (rai::smart_contract_ack const & other_a) const
+{
+	return result == other_a.result;
+}
+
 void rai::bulk_pull::serialize (rai::stream & stream_a)
 {
 	header.serialize (stream_a);

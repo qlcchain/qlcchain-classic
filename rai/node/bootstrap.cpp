@@ -731,6 +731,99 @@ bool rai::bootstrap_attempt::should_log ()
 	return result;
 }
 
+//QLINK:查询指定smart contract block的具体实现
+bool rai::bootstrap_attempt::request_smart_contract (std::unique_lock<std::mutex> & lock_a)
+{
+	auto result (true);
+	auto connection_l (connection (lock_a));
+	if (connection_l)
+	{
+		std::future<bool> future;
+		{
+			auto client (std::make_shared<rai::smart_contract_client> (connection_l));
+
+			rai::smart_contract_req req;
+			req.token_type = smart_contract_hash;
+
+			client->request (req);
+			smart_contract_client = client;
+			future = client->promise.get_future ();
+		}
+		lock_a.unlock ();
+		result = consume_future (future);
+		lock_a.lock ();
+		if (node->config.logging.network_logging ())
+		{
+			if (!result)
+			{
+				BOOST_LOG (node->log) << boost::str (boost::format ("Completed smart contract request, %1% out of sync accounts according to %2%") % pulls.size () % connection_l->endpoint);
+			}
+			else
+			{
+				BOOST_LOG (node->log) << "request_smart_contract failed, reattempting";
+			}
+		}
+	}
+	return result;
+}
+
+bool rai::bootstrap_attempt::push_smart_contract (std::unique_lock<std::mutex> & lock_a)
+{
+	auto result (true);
+	auto connection_l (connection (lock_a));
+	if (connection_l)
+	{
+		std::future<bool> future;
+		{
+			auto client (std::make_shared<rai::smart_contract_client> (connection_l));
+			rai::transaction transaction (connection_l->node->store.environment, nullptr, true);
+			client->push (transaction);
+			smart_contract_client = client;
+			future = client->promise.get_future ();
+		}
+		lock_a.unlock ();
+		result = consume_future (future);
+		lock_a.lock ();
+		if (node->config.logging.network_logging ())
+		{
+			BOOST_LOG (node->log) << "Exiting smart contract push client";
+			if (result)
+			{
+				BOOST_LOG (node->log) << "smart contract push client failed";
+			}
+		}
+	}
+	return result;
+}
+
+bool rai::bootstrap_attempt::push_sc_block_to_peers (std::unique_lock<std::mutex> & lock_a)
+{
+	auto result (true);
+	auto connection_l (connection (lock_a));
+	if (connection_l)
+	{
+		std::future<bool> future;
+		{
+			auto client (std::make_shared<rai::smart_contract_client> (connection_l));
+			client->push ();
+			smart_contract_client = client;
+			future = client->promise.get_future ();
+		}
+		lock_a.unlock ();
+		result = consume_future (future);
+		lock_a.lock ();
+		if (node->config.logging.network_logging ())
+		{
+			BOOST_LOG (node->log) << "Exiting smart contract push client";
+			if (result)
+			{
+				BOOST_LOG (node->log) << "smart contract push client failed";
+			}
+		}
+	}
+	return result;
+}
+
 bool rai::bootstrap_attempt::request_frontier (std::unique_lock<std::mutex> & lock_a)
 {
 	auto result (true);
@@ -819,6 +912,13 @@ void rai::bootstrap_attempt::run ()
 {
 	populate_connections ();
 	std::unique_lock<std::mutex> lock (mutex);
+
+	auto push_sc_failure (true);
+	while (!stopped && push_sc_failure)
+	{
+		push_sc_failure = push_sc_block_to_peers (lock);
+	}
+
 	auto frontier_failure (true);
 	while (!stopped && frontier_failure)
 	{
@@ -1364,6 +1464,23 @@ void rai::bootstrap_server::receive_header_action (boost::system::error_code con
 					add_request (std::unique_ptr<rai::message> (new rai::bulk_push (header)));
 					break;
 				}
+				//QLINK
+				case rai::message_type::smart_contract_req:
+				{
+					node->stats.inc (rai::stat::type::bootstrap, rai::stat::detail::smart_contract_req, rai::stat::dir::in);
+					auto this_l (shared_from_this ());
+					boost::asio::async_read (*socket, boost::asio::buffer (receive_buffer.data () + 8, sizeof (rai::uint256_union)), [this_l](boost::system::error_code const & ec, size_t size_a) {
+						this_l->receive_smart_contract_req_action (ec, size_a);
+					});
+					break;
+				}
+				//QLINK
+				case rai::message_type::smart_contract:
+				{
+					node->stats.inc (rai::stat::type::bootstrap, rai::stat::detail::smart_contract, rai::stat::dir::in);
+					add_request (std::unique_ptr<rai::message> (new rai::smart_contract_msg));
+					break;
+				}
 				default:
 				{
 					if (node->config.logging.network_logging ())
@@ -1448,6 +1565,58 @@ void rai::bootstrap_server::receive_frontier_req_action (boost::system::error_co
 	}
 }
 
+void rai::bootstrap_server::receive_smart_contract_req_action (boost::system::error_code const & ec, size_t size_a)
+{
+	if (!ec)
+	{
+		std::unique_ptr<rai::smart_contract_req> request (new rai::smart_contract_req);
+		rai::bufferstream stream (receive_buffer.data (), 8 + sizeof (rai::uint256_union));
+		auto error (request->deserialize (stream));
+		if (!error)
+		{
+			//if (node->config.logging.bulk_pull_logging ())
+			{
+				BOOST_LOG (node->log) << boost::str (boost::format ("Received smart_contract_req request for hash %1% ") % request->token_type.to_string ());
+			}
+			add_request (std::unique_ptr<rai::message> (request.release ()));
+			receive ();
+		}
+	}
+	else
+	{
+		if (node->config.logging.network_logging ())
+		{
+			BOOST_LOG (node->log) << boost::str (boost::format ("Error sending smart_contract_req request: %1%") % ec.message ());
+		}
+	}
+}
+
+void rai::bootstrap_server::receive_smart_contract_action (boost::system::error_code const & ec, size_t size_a)
+{
+	if (!ec)
+	{
+		std::unique_ptr<rai::smart_contract_msg> request (new rai::smart_contract_msg);
+		rai::bufferstream stream (receive_buffer.data (), 8 + sizeof (size_t) + size_a);
+		auto error (request->deserialize (stream));
+		if (!error)
+		{
+			//if (node->config.logging.bulk_pull_logging ())
+			{
+				BOOST_LOG (node->log) << boost::str (boost::format ("Received smart_contract_msg request")); //for hash %1% ") % request->smart_contract->hash ());
+			}
+			add_request (std::unique_ptr<rai::message> (request.release ()));
+			receive ();
+		}
+	}
+	else
+	{
+		if (node->config.logging.network_logging ())
+		{
+			BOOST_LOG (node->log) << boost::str (boost::format ("Error Received smart_contract_msg: %1%") % ec.message ());
+		}
+	}
+}
+
 void rai::bootstrap_server::add_request (std::unique_ptr<rai::message> message_a)
 {
 	std::lock_guard<std::mutex> lock (mutex);
@@ -1514,6 +1683,28 @@ public:
 	{
 		auto response (std::make_shared<rai::frontier_req_server> (connection, std::unique_ptr<rai::frontier_req> (static_cast<rai::frontier_req *> (connection->requests.front ().release ()))));
 		response->send_next ();
+	}
+	void smart_contract_req (rai::smart_contract_req const &) override
+	{
+		auto response (std::make_shared<rai::smart_contract_req_server> (connection, std::unique_ptr<rai::smart_contract_req> (static_cast<rai::smart_contract_req *> (connection->requests.front ().release ()))));
+		response->send ();
+	}
+	// TODO: 实现
+	// AUTHOR: goreng
+	void smart_contract (rai::smart_contract_msg const &) override
+	{
+		//  接收 sc
+		// 校验
+		// 根据校验结构会 ack/nack
+		// 转发 SC
+		auto response (std::make_shared<rai::smart_contract_server> (connection));
+		response->receive ();
+	}
+	// TODO: 实现
+	// AUTHOR: goreng
+	void smart_contract_ack (rai::smart_contract_ack const &) override
+	{
+		// 相应 SC 接收内容
 	}
 	std::shared_ptr<rai::bootstrap_server> connection;
 };
@@ -2088,5 +2279,363 @@ void rai::frontier_req_server::next ()
 	else
 	{
 		current.clear ();
+	}
+}
+
+//QLINK
+rai::smart_contract_req_server::smart_contract_req_server (std::shared_ptr<rai::bootstrap_server> const & connection_a, std::unique_ptr<rai::smart_contract_req> request_a) :
+connection (connection_a),
+request (std::move (request_a))
+{
+}
+
+//QLINK
+void rai::smart_contract_req_server::send ()
+{
+	assert (request != nullptr);
+	rai::transaction transaction (connection->node->store.environment, nullptr, false);
+
+	auto block (connection->node->store.block_get (transaction, request->token_type));
+	if (block->type () == rai::block_type::smart_contract)
+	{
+		auto sc_block (dynamic_cast<rai::smart_contract_block *> (block.get ()));
+		std::shared_ptr<rai::smart_contract_block> sc_block_1 (sc_block);
+
+		if (sc_block != nullptr)
+		{
+			rai::smart_contract_msg message (sc_block_1);
+			auto buffer (std::make_shared<std::vector<uint8_t>> ());
+			{
+				rai::vectorstream stream (*buffer);
+				message.serialize (stream);
+			}
+			auto this_l (shared_from_this ());
+			boost::asio::async_write (*connection->socket, boost::asio::buffer (buffer->data (), buffer->size ()), [this_l, buffer](boost::system::error_code const & ec, size_t size_a) {
+				rai::transaction transaction (this_l->connection->node->store.environment, nullptr, false);
+				if (!ec)
+				{
+					BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("send smart_contract_req reply : %1%") % ec.message ());
+				}
+				else
+				{
+					//if (this_l->connection->node->config.logging.bulk_pull_logging ())
+					{
+						BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("Unable to send smart_contract_req reply   : %1%") % ec.message ());
+					}
+				}
+			});
+		}
+	}
+}
+
+//QLINK
+rai::smart_contract_server::smart_contract_server (std::shared_ptr<rai::bootstrap_server> const & connection_a) :
+connection (connection_a)
+{
+}
+
+rai::smart_contract_server::~smart_contract_server ()
+{
+}
+
+void rai::smart_contract_server::receive ()
+{
+	auto this_l (shared_from_this ());
+	boost::asio::async_read (*connection->socket, boost::asio::buffer (receive_buffer.data (), 4), [this_l](boost::system::error_code const & ec, size_t size_a) {
+		if (!ec)
+		{
+			//auto this_l (shared_from_this ());
+			rai::bufferstream stream (this_l->receive_buffer.data () + 8, sizeof (size_t));
+			size_t len_sc_info;
+			auto result = rai::read (stream, len_sc_info);
+			if (!result)
+			{
+				boost::asio::async_read (*this_l->connection->socket, boost::asio::buffer (this_l->receive_buffer.data () + 8 + sizeof (size_t), len_sc_info), [this_l](boost::system::error_code const & ec_1, size_t size_b) {
+					this_l->received_block (ec_1, size_b);
+				});
+			}
+			else
+			{
+			}
+		}
+		else
+		{
+			//if (this_l->connection->node->config.logging.bulk_pull_logging ())
+			{
+				BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("Error receiving block type: %1%") % ec.message ());
+			}
+		}
+	});
+}
+
+void rai::smart_contract_server::received_block (boost::system::error_code const & ec, size_t size_a)
+{
+	if (!ec)
+	{
+		auto this_l (shared_from_this ());
+		rai::smart_contract_result result;
+		rai::smart_contract_msg sc_info;
+		rai::bufferstream stream (connection->receive_buffer.data (), 8 + sizeof (size_t) + size_a);
+
+		auto error_l (sc_info.deserialize (stream));
+		if (!error_l)
+		{
+			if (!rai::validate_message (sc_info.smart_contract->hashables.sc_account, sc_info.smart_contract->hash (), sc_info.smart_contract->signature) && (sc_info.smart_contract->hashables.hash_abi () == sc_info.smart_contract->hashables.abi_hash))
+			{
+				rai::transaction transaction (connection->node->store.environment, nullptr, true);
+				auto block (connection->node->store.block_get (transaction, sc_info.smart_contract->hash ()));
+				if (block == nullptr)
+				{
+					rai::block_hash successor (0);
+					connection->node->store.block_put (transaction, sc_info.smart_contract->hash (), *sc_info.smart_contract, successor);
+					result = rai::smart_contract_result::success;
+					//QLINK,把收到的smart contract block放到队列中
+					connection->node->sc_blocks.push_back (sc_info.smart_contract);
+				}
+				else
+				{
+					result = rai::smart_contract_result::already_exist;
+				}
+			}
+			else
+			{
+				result = rai::smart_contract_result::invalid;
+			}
+
+			rai::smart_contract_ack ack (result);
+			auto buffer (std::make_shared<std::vector<uint8_t>> ());
+			{
+				rai::vectorstream stream (*buffer);
+				ack.serialize (stream);
+			}
+			auto this_l (shared_from_this ());
+			boost::asio::async_write (*connection->socket, boost::asio::buffer (buffer->data (), buffer->size ()), [this_l, buffer](boost::system::error_code const & ec, size_t size_a) {
+				if (!ec)
+				{
+					BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("send smart_contract_ack  reply: %1%") % ec.message ());
+				}
+				else
+				{
+					//if (this_l->connection->node->config.logging.bulk_pull_logging ())
+					{
+						BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("Unable to send smart_contract_ack reply   : %1%") % ec.message ());
+					}
+				}
+			});
+		}
+	}
+	else
+	{
+	}
+}
+
+//QLINK
+rai::smart_contract_client::smart_contract_client (std::shared_ptr<rai::bootstrap_client> const & connection_a) :
+connection (connection_a)
+{
+}
+
+rai::smart_contract_client::~smart_contract_client ()
+{
+}
+//QLINK
+void rai::smart_contract_client::request (rai::smart_contract_req const & req)
+{
+	rai::smart_contract_req request (req);
+	auto send_buffer (std::make_shared<std::vector<uint8_t>> ());
+	{
+		rai::vectorstream stream (*send_buffer);
+		request.serialize (stream);
+	}
+	auto this_l (shared_from_this ());
+	connection->start_timeout ();
+	boost::asio::async_write (connection->socket, boost::asio::buffer (send_buffer->data (), send_buffer->size ()), [this_l, send_buffer](boost::system::error_code const & ec, size_t size_a) {
+		this_l->connection->stop_timeout ();
+		if (!ec)
+		{
+			this_l->receive_block ();
+		}
+		else
+		{
+			if (this_l->connection->node->config.logging.network_logging ())
+			{
+				BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("Error while sending smart contract request %1%") % ec.message ());
+			}
+		}
+	});
+}
+
+//QLINK
+void rai::smart_contract_client::receive_block ()
+{
+	auto this_l (shared_from_this ());
+	connection->start_timeout ();
+	boost::asio::async_read (connection->socket, boost::asio::buffer (connection->receive_buffer.data (), 8 + sizeof (size_t)), [this_l](boost::system::error_code const & ec, size_t size_a) {
+		this_l->connection->stop_timeout ();
+		if (!ec)
+		{
+			rai::bufferstream stream (this_l->connection->receive_buffer.data () + 8, sizeof (size_t));
+			size_t len_sc_info;
+			auto result = rai::read (stream, len_sc_info);
+			if (!result)
+			{
+				boost::asio::async_read (this_l->connection->socket, boost::asio::buffer (this_l->connection->receive_buffer.data () + 8 + sizeof (size_t), len_sc_info), [this_l](boost::system::error_code const & ec_1, size_t size_b) {
+					this_l->receive_block (ec_1, size_b);
+				});
+			}
+			else
+			{
+			}
+		}
+		else
+		{
+			BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("Error receiving block type: %1%") % ec.message ());
+		}
+	});
+}
+
+//QLINK
+void rai::smart_contract_client::receive_block (boost::system::error_code const & ec, size_t size_a)
+{
+	if (!ec)
+	{
+		auto this_l (shared_from_this ());
+		rai::smart_contract_msg sc_info;
+		rai::bufferstream stream (this_l->connection->receive_buffer.data (), 8 + sizeof (size_t) + size_a);
+
+		auto error_l (sc_info.deserialize (stream));
+		if (!error_l)
+		{
+			if (!rai::validate_message (sc_info.smart_contract->hashables.sc_owner_account, sc_info.smart_contract->hash (), sc_info.smart_contract->signature) && (sc_info.smart_contract->hashables.hash_abi () == sc_info.smart_contract->hashables.abi_hash))
+			{
+				rai::transaction transaction (connection->node->store.environment, nullptr, true);
+				rai::block_hash successor (0);
+				connection->node->store.block_put (transaction, sc_info.smart_contract->hash (), *sc_info.smart_contract, successor);
+			}
+		}
+		else
+		{
+			BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("Error deserialize sc_info"));
+		}
+	}
+	else
+	{
+		//if (connection->node->config.logging.bulk_pull_logging ())
+		{
+			BOOST_LOG (connection->node->log) << boost::str (boost::format ("Error smart contract receiving block: %1%") % ec.message ());
+		}
+	}
+}
+
+void rai::smart_contract_client::push ()
+{
+	auto this_l (shared_from_this ());
+	for (int i = 0; i < connection->node->sc_blocks.size (); i++)
+	{
+		this_l->push_block (connection->node->sc_blocks[i]);
+	}
+	connection->node->sc_blocks.clear ();
+}
+
+void rai::smart_contract_client::push (MDB_txn * transaction_a)
+{
+	auto block (connection->node->store.block_get (transaction_a, connection->attempt->smart_contract_hash_push));
+
+	if (block->type () == rai::block_type::smart_contract)
+	{
+		auto sc_block (dynamic_cast<rai::smart_contract_block *> (block.get ()));
+		std::shared_ptr<rai::smart_contract_block> sc_block_1 (sc_block);
+
+		if (sc_block != nullptr)
+		{
+			auto this_l (shared_from_this ());
+			this_l->push_block (sc_block_1);
+		}
+		else
+		{
+		}
+	}
+}
+
+void rai::smart_contract_client::push_block (std::shared_ptr<rai::smart_contract_block> const & block_a)
+{
+	rai::smart_contract_msg message (block_a);
+	auto buffer (std::make_shared<std::vector<uint8_t>> ());
+	{
+		rai::vectorstream stream (*buffer);
+		message.serialize (stream);
+	}
+	auto this_l (shared_from_this ());
+	connection->start_timeout ();
+	boost::asio::async_write (connection->socket, boost::asio::buffer (buffer->data (), buffer->size ()), [this_l, buffer](boost::system::error_code const & ec, size_t size_a) {
+		this_l->connection->stop_timeout ();
+		if (!ec)
+		{
+			BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("success sending block during smart contract push: %1%") % ec.message ());
+			this_l->receive_smart_contract_ack ();
+		}
+		else
+		{
+			//if (this_l->connection->node->config.logging.bulk_pull_logging ())
+			{
+				BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("Error sending block during smart contract push: %1%") % ec.message ());
+			}
+		}
+	});
+}
+//QLINK
+void rai::smart_contract_client::receive_smart_contract_ack ()
+{
+	auto this_l (shared_from_this ());
+	connection->start_timeout ();
+	size_t size_l (8 + sizeof (uint8_t));
+	boost::asio::async_read (connection->socket, boost::asio::buffer (connection->receive_buffer.data (), size_l), [this_l, size_l](boost::system::error_code const & ec, size_t size_a) {
+		this_l->connection->stop_timeout ();
+
+		if (size_a == size_l)
+		{
+			this_l->receive_smart_contract_ack (ec, size_a);
+		}
+		else
+		{
+			if (this_l->connection->node->config.logging.network_message_logging ())
+			{
+				BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("Invalid size: expected %1%, got %2%") % size_l % size_a);
+			}
+		}
+	});
+}
+
+//QLINK
+void rai::smart_contract_client::receive_smart_contract_ack (boost::system::error_code const & ec, size_t size_a)
+{
+	if (!ec)
+	{
+		assert (size_a == sizeof (uint8_t) + 8);
+		rai::bufferstream stream (connection->receive_buffer.data () + 8, sizeof (uint8_t));
+		rai::smart_contract_result result;
+		auto error1 (rai::read (stream, result));
+		assert (!error1);
+
+		if (result == rai::smart_contract_result::success)
+		{
+			BOOST_LOG (connection->node->log) << boost::str (boost::format ("smart_contract_block valid"));
+		}
+		else if (result == rai::smart_contract_result::already_exist)
+		{
+			BOOST_LOG (connection->node->log) << boost::str (boost::format ("smart_contract_block already_exist"));
+		}
+		else if (result == rai::smart_contract_result::invalid)
+		{
+			BOOST_LOG (connection->node->log) << boost::str (boost::format ("smart_contract_block invalid"));
+		}
+		else
+		{
+			BOOST_LOG (connection->node->log) << boost::str (boost::format ("unknow result"));
+		}
+		BOOST_LOG (connection->node->log) << boost::str (boost::format ("Received  smart contract ack from %1%") % connection->socket.remote_endpoint ());
+	}
+	else
+	{
 	}
 }

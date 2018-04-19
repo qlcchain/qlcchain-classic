@@ -125,7 +125,7 @@ class wallet : public std::enable_shared_from_this<rai::wallet>
 public:
 	std::shared_ptr<rai::block> change_action (rai::account const &, rai::account const &, bool = true);
 	std::shared_ptr<rai::block> receive_action (rai::block const &, rai::account const &, rai::uint128_union const &, bool = true);
-	std::shared_ptr<rai::block> send_action (rai::account const &, rai::account const &, rai::uint128_t const &, bool = true, boost::optional<std::string> = {});
+	std::shared_ptr<rai::block> send_action (rai::account const &, rai::account const &, rai::block_hash const &, rai::uint128_t const &, bool = true, boost::optional<std::string> = {});
 	wallet (bool &, rai::transaction &, rai::node &, std::string const &);
 	wallet (bool &, rai::transaction &, rai::node &, std::string const &, std::string const &);
 	void enter_initial_password ();
@@ -143,8 +143,8 @@ public:
 	void change_async (rai::account const &, rai::account const &, std::function<void(std::shared_ptr<rai::block>)> const &, bool = true);
 	bool receive_sync (std::shared_ptr<rai::block>, rai::account const &, rai::uint128_t const &);
 	void receive_async (std::shared_ptr<rai::block>, rai::account const &, rai::uint128_t const &, std::function<void(std::shared_ptr<rai::block>)> const &, bool = true);
-	rai::block_hash send_sync (rai::account const &, rai::account const &, rai::uint128_t const &);
-	void send_async (rai::account const &, rai::account const &, rai::uint128_t const &, std::function<void(std::shared_ptr<rai::block>)> const &, bool = true, boost::optional<std::string> = {});
+	rai::block_hash send_sync (rai::account const &, rai::account const &, rai::block_hash const &, rai::uint128_t const &);
+	void send_async (rai::account const &, rai::account const &, rai::block_hash const &, rai::uint128_t const &, std::function<void(std::shared_ptr<rai::block>)> const &, bool = true, boost::optional<std::string> = {});
 	void work_apply (rai::account const &, std::function<void(uint64_t)>);
 	void work_cache_blocking (rai::account const &, rai::block_hash const &);
 	void work_update (MDB_txn *, rai::account const &, rai::block_hash const &, uint64_t);

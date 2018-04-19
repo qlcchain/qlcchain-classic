@@ -216,6 +216,155 @@ public:
 	void work_peer_add ();
 	void work_peers ();
 	void work_peers_clear ();
+	/**
+	 * 获取 UTC 世纪秒
+	 * Request:
+	 * {
+	 *	"action": "chain_utc_epoch_time"
+	 * }
+	 * Response:
+	 *	{  
+	 *	  "seconds": "1525417246"   
+	 *	}
+	 */
+	void chain_utc_epoch_time ();
+	/**
+	 *使用给定的参数以散列值调用智能合约，并返回结果
+	 * Request:
+	 * {
+	 *	"action": "invoke",
+	 *	"hash": "000D1BAEC8EC208142C99059B393051BAC8380F9B5A2E6B2489A277D81789F3F"
+	 *	"params": [....]
+	 * }
+	 * Response:
+	 * {
+	 *	"result":{
+	 *		"state": "HALT, BREAK",
+	 *		"gas_consumed": "0.338",
+	 *		"stack": [
+     *       {
+     *           "type": "ByteArray",
+     *           "value": "576f6f6c6f6e67"
+     *       }
+     *   ]
+	 *	}
+	 * }
+	 */
+	void smart_contract_invoke ();
+	/**
+	 * 使用给定的操作和参数，以散列值调用智能合约之后返回结果。
+	 * Request:
+	 * {
+	 *	"action": "invokefunction",
+	 *	"hash": "000D1BAEC8EC208142C99059B393051BAC8380F9B5A2E6B2489A277D81789F3F"
+	 *	"params": [
+	 *		"balanceOf",
+	 *		 [
+	 *			  {
+	 *			    "type": "Hash160",
+	 *			    "value": "bfc469dd56932409677278f6b7422f3e1f34481d"
+	 *			  }
+	 *		]
+	 *	]
+	 * }
+	 * Response:
+	 * {
+	 *	"result":{
+	 *		"state": "HALT, BREAK",
+	 *		"gas_consumed": "0.338",
+	 *		"stack": [
+     *       {
+     *           "type": "ByteArray",
+     *           "value": "576f6f6c6f6e67"
+     *       }
+     *   ]
+	 *	}
+	 * }
+	 */
+	void smart_contract_invoke_function ();
+	/**
+	 * 
+	 */
+	void assets_put ();
+	/**
+	 *
+	 */
+	void assets_get ();
+	/**
+	 *
+	 */
+	void assets_remove ();
+	/**
+	 * 获得该资产的 ID
+	 */
+	void assets_id ();
+	/**
+	 * 获得该资产的类别
+	 */
+	void assets_type ();
+	/**
+	 * 获得该资产的总量
+	 */
+	void assets_amount ();
+	/**
+	 * 获得该资产的已经发行出去的数量
+	 */
+	void assets_available ();
+	/**
+	 * 获得该资产的精度（最小分割数量），单位为小数点之后的位数
+	 */
+	void assets_precision ();
+	/**
+	 *获得该资产的所有人（公钥）
+	 */
+	void assets_owner ();
+	/**
+	 *获得该资产的管理员（合约地址），有权对资产的属性（如总量，名称等）进行修改
+	 */
+	void assets_admin ();
+	/**
+	 *获得该资产的发行人（合约地址），有权进行资产的发行
+	 */
+	void assets_issuer ();
+	/**
+	 * 通过虚拟机传递脚本之后返回结果
+	 * Request:
+	 * {
+	 *	"action": "invokescript",
+	 *	"hash": "000D1BAEC8EC208142C99059B393051BAC8380F9B5A2E6B2489A277D81789F3F"
+	 * }
+	 * Response:
+	 * {
+	 *	"result":{
+	 *		"state": "HALT, BREAK",
+	 *		"gas_consumed": "0.338",
+	 *		"stack": [
+     *       {
+     *           "type": "ByteArray",
+     *           "value": "576f6f6c6f6e67"
+     *       }
+     *   ]
+	 *	}
+	 * }
+	 */
+	void smart_contract_invoke_script ();
+	/**
+	 * 根据给定的 hash 获取智能合约 abi
+	 * //TODO: 临时给 nvm 调用，正式版删除
+	 * Request:
+	 * {
+	 *	"action": "smart_contract_block",
+	 *	"hash": "000D1BAEC8EC208142C99059B393051BAC8380F9B5A2E6B2489A277D81789F3F"
+	 *
+	 * }
+	 * Response:
+	 * {
+	 *	"block": {
+	 *	....
+	 *	}
+	 * }
+	 */
+	void smart_contract_block ();
 	std::string body;
 	rai::node & node;
 	rai::rpc & rpc;

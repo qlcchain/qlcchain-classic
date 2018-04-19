@@ -66,9 +66,62 @@ public:
 	rai::account frontier_get (MDB_txn *, rai::block_hash const &);
 	void frontier_del (MDB_txn *, rai::block_hash const &);
 
+	/**
+	 * 检查 abi 是否存在
+	 */
+	bool abi_exists (MDB_txn *, rai::block_hash const &);
+	/**
+	 * 写 abi block_hash 到数据库
+	 */
+	bool abi_put (MDB_txn *, rai::block_hash const &);
+
+	/**
+	 * 删除指定的 abi hash
+	 */
+	void abi_del (MDB_txn *, rai::block_hash const &);
+
+	/*** ACCOUNT ****/
+	/**
+	 * 从数据库中删除指定的 account 的所有 account_info
+	 */
+	void accounts_del (MDB_txn *, rai::account const &);
+	/**
+	 * 从数据库中查询指定的 account 的 account_info 列表
+	 */
+	bool accounts_get (MDB_txn *, rai::account const &, std::vector<rai::account_info> &);
+	/**
+	 * 从数据库中查询指定的 account 的第一个 account_info
+	 */
+	bool accounts_get_first (MDB_txn *, rai::account const &, rai::account_info &);
+	/**
+	 * 从数据库中查询指定的 account 的 指定 token 的 account_info
+	 */
+	bool accounts_get (MDB_txn *, rai::account const &, rai::block_hash const &, rai::account_info &);
+	/**
+	 * 向数据库中更新指定的 account 的 account_info 列表
+	 */
+	bool accounts_put (MDB_txn *, rai::account const &, std::vector<rai::account_info> const &);
+
+	/*** TOKEN ACCOUNT **/
+	/**
+	 * 更新 account_info 信息到数据库中
+	 * 
+	 * 有则更新，无则创建
+	 * 
+	 */
 	void account_put (MDB_txn *, rai::account const &, rai::account_info const &);
+	/**
+	 * 从数据库中查询指定的 token 的 account_info
+	 * TODO: 检查所有调用逻辑
+	 */
 	bool account_get (MDB_txn *, rai::account const &, rai::account_info &);
+	/**
+	 * 从数据库中删除指定的 token 的 account_info
+	 */
 	void account_del (MDB_txn *, rai::account const &);
+	/**
+	 * 检查指定 token 账号是否存在
+	 */
 	bool account_exists (MDB_txn *, rai::account const &);
 	size_t account_count (MDB_txn *);
 	rai::store_iterator latest_begin (MDB_txn *, rai::account const &);
@@ -112,6 +165,16 @@ public:
 	void checksum_put (MDB_txn *, uint64_t, uint8_t, rai::checksum const &);
 	bool checksum_get (MDB_txn *, uint64_t, uint8_t, rai::checksum &);
 	void checksum_del (MDB_txn *, uint64_t, uint8_t);
+	// 资产 CURD
+	void assets_put (MDB_txn *, rai::asset_key const &, rai::asset_value const &);
+	bool assets_get (MDB_txn *, rai::asset_key const &, rai::asset_value &);
+	void assets_delete (MDB_txn *, rai::asset_key const &);
+
+	// 智能合约 CURD
+	// bool smart_contract_put (MDB_txn *, rai::block_hash const &, rai::smart_contract_block const &);
+	// bool smart_contract_put (MDB_txn * , rai::smart_contract_block const & );
+	// bool smart_contract_get (MDB_txn *, rai::block_hash const &, rai::smart_contract_block const &);
+	// void smart_contract_delete (MDB_txn *, rai::block_hash const &);
 
 	// Return latest vote for an account from store
 	std::shared_ptr<rai::vote> vote_get (MDB_txn *, rai::account const &);
@@ -228,5 +291,29 @@ public:
 	 * rai::uint256_union (arbitrary key) -> blob
 	 */
 	MDB_dbi meta;
+
+	/**
+	 * 账号与 Token open_block 的映射
+	 * account->token_open_blocks
+	 */
+	MDB_dbi token_accounts;
+
+	/*
+	 * 资产的 id 与 值的映射
+	 * asset_key->asset_value
+	 */
+	MDB_dbi assets;
+
+	/*
+	 * 智能合约 hash 与 智能合约 block 的映射
+	 *  smart_contract_hash->smart_contract_block
+	 */
+	MDB_dbi smart_contract;
+
+	/*
+	 * abi hash 列表，用于校验
+	 *  abi_hash ->
+	 */
+	MDB_dbi abi;
 };
 }

@@ -202,6 +202,7 @@ public:
 		open,
 		change,
 		state_block,
+		smart_contract_block,
 
 		// message specific
 		keepalive,
@@ -209,6 +210,9 @@ public:
 		republish_vote,
 		confirm_req,
 		confirm_ack,
+		smart_contract_req,
+		smart_contract,
+		smart_contract_ack,
 
 		// bootstrap specific
 		initiate,

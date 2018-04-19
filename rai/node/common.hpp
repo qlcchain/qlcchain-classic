@@ -93,12 +93,23 @@ enum class message_type : uint8_t
 	bulk_pull,
 	bulk_push,
 	frontier_req,
-	bulk_pull_blocks
+	bulk_pull_blocks,
+	// 智能合约
+	smart_contract_req,
+	smart_contract,
+	smart_contract_ack
 };
 enum class bulk_pull_blocks_mode : uint8_t
 {
 	list_blocks,
 	checksum_blocks
+};
+// 智能合约校验结果
+enum class smart_contract_result : uint8_t
+{
+	invalid,
+	already_exist,
+	success
 };
 class message_visitor;
 class message_header
@@ -249,6 +260,61 @@ public:
 	void serialize (rai::stream &) override;
 	void visit (rai::message_visitor &) const override;
 };
+
+//QLINK
+/**
+* 请求指定的智能合约
+*/
+// AUTHOR: goreng
+class smart_contract_req : public message
+{
+public:
+	smart_contract_req ();
+	bool deserialize (rai::stream &) override;
+	void serialize (rai::stream &) override;
+	void visit (rai::message_visitor &) const override;
+	//智能合约 hash
+	rai::block_hash token_type;
+};
+
+//QLINK
+/**
+ * 智能合约 TCP 消息
+ */
+// AUTHOR: goreng
+class smart_contract_msg : public message
+{
+public:
+	smart_contract_msg ();
+	smart_contract_msg (std::shared_ptr<rai::smart_contract_block>);
+	bool deserialize (rai::stream &) override;
+	void serialize (rai::stream &) override;
+	void visit (rai::message_visitor &) const override;
+	/**
+	 * \brief 智能合约内容
+	 */
+	std::shared_ptr<rai::smart_contract_block> smart_contract;
+	// FIXME: 报文长度？
+	size_t len;
+};
+
+//QLINK
+/**
+ * 智能合约响应消息
+ */
+// AUTHOR: goreng
+class smart_contract_ack : public message
+{
+public:
+	smart_contract_ack (smart_contract_result const &);
+	bool deserialize (rai::stream &) override;
+	void serialize (rai::stream &) override;
+	void visit (rai::message_visitor &) const override;
+	bool operator== (rai::smart_contract_ack const &) const;
+	// 智能合约校验结果
+	rai::smart_contract_result result;
+};
+
 class message_visitor
 {
 public:
@@ -260,6 +326,12 @@ public:
 	virtual void bulk_pull_blocks (rai::bulk_pull_blocks const &) = 0;
 	virtual void bulk_push (rai::bulk_push const &) = 0;
 	virtual void frontier_req (rai::frontier_req const &) = 0;
+	// 查询指定的智能合约
+	virtual void smart_contract_req (rai::smart_contract_req const &) = 0;
+	// 推送智能合约到连接的节点
+	virtual void smart_contract (rai::smart_contract_msg const &) = 0;
+	// 接收智能合约后的校验结果
+	virtual void smart_contract_ack (rai::smart_contract_ack const &) = 0;
 	virtual ~message_visitor ();
 };
 

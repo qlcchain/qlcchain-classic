@@ -155,6 +155,11 @@ public:
 		}
 		ledger.store.block_del (transaction, hash);
 	}
+
+	//TODO: fix rollback smart contract block
+	void smart_contract_block (rai::smart_contract_block const &) override
+	{
+	}
 	MDB_txn * transaction;
 	rai::ledger & ledger;
 };
@@ -170,6 +175,7 @@ public:
 	void change_block (rai::change_block const &) override;
 	void state_block (rai::state_block const &) override;
 	void state_block_impl (rai::state_block const &);
+	void smart_contract_block (rai::smart_contract_block const &) override;
 	rai::ledger & ledger;
 	MDB_txn * transaction;
 	rai::process_return result;
@@ -183,64 +189,84 @@ void ledger_processor::state_block (rai::state_block const & block_a)
 void ledger_processor::state_block_impl (rai::state_block const & block_a)
 {
 	auto hash (block_a.hash ());
-	auto existing (ledger.store.block_exists (transaction, hash));
+	// 检查引用的 smart contract token 是否存在
+	auto token_hash (block_a.hashables.token_hash);
+	auto token_exist = !token_hash.is_zero () && ledger.store.block_exists (transaction, token_hash);
+	auto existing (ledger.store.block_exists (transaction, hash) && token_exist);
 	result.code = existing ? rai::process_result::old : rai::process_result::progress; // Have we seen this block before? (Unambiguous)
 	if (result.code == rai::process_result::progress)
 	{
+		// 校验签名是否正确
 		result.code = validate_message (block_a.hashables.account, hash, block_a.signature) ? rai::process_result::bad_signature : rai::process_result::progress; // Is this block signed correctly (Unambiguous)
 		if (result.code == rai::process_result::progress)
 		{
+			// 校验操作 account 合法性
 			result.code = block_a.hashables.account.is_zero () ? rai::process_result::opened_burn_account : rai::process_result::progress; // Is this for the burn account? (Unambiguous)
 			if (result.code == rai::process_result::progress)
 			{
 				rai::account_info info;
 				result.amount = block_a.hashables.balance;
 				auto is_send (false);
-				auto account_error (ledger.store.account_get (transaction, block_a.hashables.account, info));
+				// 根据 token_hash 获取对应的 account_info
+				auto account_error (ledger.store.accounts_get (transaction, block_a.hashables.account, token_hash, info));
 				if (!account_error)
 				{
 					// Account already exists
 					result.code = block_a.hashables.previous.is_zero () ? rai::process_result::fork : rai::process_result::progress; // Has this account already been opened? (Ambigious)
 					if (result.code == rai::process_result::progress)
 					{
+						// 当且仅当账号存在且 token 合约存在
 						result.code = ledger.store.block_exists (transaction, block_a.hashables.previous) ? rai::process_result::progress : rai::process_result::gap_previous; // Does the previous block exist in the ledger? (Unambigious)
 						if (result.code == rai::process_result::progress)
 						{
-							is_send = block_a.hashables.balance < info.balance;
-							result.amount = is_send ? (info.balance.number () - result.amount.number ()) : (result.amount.number () - info.balance.number ());
-							result.code = block_a.hashables.previous == info.head ? rai::process_result::progress : rai::process_result::fork; // Is the previous block the account's head block? (Ambigious)
+							result.code = token_exist ? rai::process_result::progress : rai::process_result::gap_smart_contract;
+							if (result.code == rai::process_result::progress)
+							{
+								is_send = block_a.hashables.balance < info.balance;
+								result.amount = is_send ? (info.balance.number () - result.amount.number ()) : (result.amount.number () - info.balance.number ());
+								result.code = block_a.hashables.previous == info.head ? rai::process_result::progress : rai::process_result::fork; // Is the previous block the account's head block? (Ambigious)
+							}
 						}
 					}
 				}
 				else
 				{
 					// Account does not yet exists
+					// 账号不存在，但 token 合约已存在
 					result.code = block_a.previous ().is_zero () ? rai::process_result::progress : rai::process_result::gap_previous; // Does the first block in an account yield 0 for previous() ? (Unambigious)
-					if (result.code == rai::process_result::progress)
+					if (result.code == rai::process_result::progress) // open block
 					{
-						ledger.stats.inc (rai::stat::type::ledger, rai::stat::detail::open);
-						result.code = !block_a.hashables.link.is_zero () ? rai::process_result::progress : rai::process_result::gap_source; // Is the first block receiving from a send ? (Unambigious)
+						result.code = token_exist ? rai::process_result::progress : rai::process_result::gap_smart_contract;
+						if (result.code == rai::process_result::progress)
+						{
+							ledger.stats.inc (rai::stat::type::ledger, rai::stat::detail::open);
+							result.code = !block_a.hashables.link.is_zero () ? rai::process_result::progress : rai::process_result::gap_source; // Is the first block receiving from a send ? (Unambigious)
+						}
 					}
 				}
 				if (result.code == rai::process_result::progress)
 				{
 					if (!is_send)
 					{
-						if (!block_a.hashables.link.is_zero ())
+						if (!block_a.hashables.link.is_zero ()) // open or receive
 						{
 							result.code = ledger.store.block_exists (transaction, block_a.hashables.link) ? rai::process_result::progress : rai::process_result::gap_source; // Have we seen the source block already? (Harmless)
 							if (result.code == rai::process_result::progress)
 							{
-								rai::pending_key key (block_a.hashables.account, block_a.hashables.link);
-								rai::pending_info pending;
-								result.code = ledger.store.pending_get (transaction, key, pending) ? rai::process_result::unreceivable : rai::process_result::progress; // Has this source already been received (Malformed)
+								result.code = token_exist ? rai::process_result::progress : rai::process_result::gap_smart_contract;
 								if (result.code == rai::process_result::progress)
 								{
-									result.code = result.amount == pending.amount ? rai::process_result::progress : rai::process_result::balance_mismatch;
+									rai::pending_key key (block_a.hashables.account, block_a.hashables.link);
+									rai::pending_info pending;
+									result.code = ledger.store.pending_get (transaction, key, pending) ? rai::process_result::unreceivable : rai::process_result::progress; // Has this source already been received (Malformed)
+									if (result.code == rai::process_result::progress)
+									{
+										result.code = result.amount == pending.amount ? rai::process_result::progress : rai::process_result::balance_mismatch;
+									}
 								}
 							}
 						}
-						else
+						else //change
 						{
 							// If there's no link, the balance must remain the same, only the representative can change
 							result.code = result.amount.is_zero () ? rai::process_result::progress : rai::process_result::balance_mismatch;
@@ -281,6 +307,37 @@ void ledger_processor::state_block_impl (rai::state_block const & block_a)
 					}
 					// Frontier table is unnecessary for state blocks and this also prevents old blocks from being inserted on top of state blocks
 					result.account = block_a.hashables.account;
+				}
+			}
+		}
+	}
+}
+
+// 校验 smart_contract_block
+void ledger_processor::smart_contract_block (rai::smart_contract_block const & block_a)
+{
+	auto hash (block_a.hash ());
+	auto existing (ledger.store.block_exists (transaction, hash));
+	result.code = existing ? rai::process_result::old : rai::process_result::progress;
+	if (result.code == rai::process_result::progress)
+	{
+		auto account (block_a.hashables.sc_account);
+		result.code = account.is_zero () || block_a.hashables.sc_owner_account.is_zero () ? rai::process_result::sc_account_mismatch : rai::process_result::progress;
+		if (result.code == rai::process_result::progress)
+		{
+			result.code = validate_message (account, hash, block_a.signature) ? rai::process_result::bad_signature : rai::process_result::progress; // Is this block signed correctly (Malformed)
+			if (result.code == rai::process_result::progress)
+			{
+				result.code = block_a.hashables.abi_hash == block_a.hashables.hash_abi () ? rai::process_result::progress : rai::process_result::abi_mismatch;
+				if (result.code == rai::process_result::progress)
+				{
+					result.code = ledger.store.abi_exists (transaction, block_a.hashables.abi_hash) ? rai::process_result::abi_already_exist : rai::process_result::progress;
+					if (result.code == rai::process_result::progress)
+					{
+						result.account = account;
+						result.amount = 0;
+						ledger.stats.inc (rai::stat::type::ledger, rai::stat::detail::smart_contract_block);
+					}
 				}
 			}
 		}
@@ -829,7 +886,7 @@ void rai::ledger::change_latest (MDB_txn * transaction_a, rai::account const & a
 	}
 	else
 	{
-		store.account_del (transaction_a, account_a);
+		store.accounts_del (transaction_a, account_a);
 	}
 }
 
