@@ -75,47 +75,44 @@ std::vector<uint8_t> rai::hex_string_to_stream (std::string const & hexstring)
 	return std::vector<uint8_t> (hex_code.begin (), hex_code.end ());
 }
 
-
 //QLINK
-bool rai::put_sc_info()
+bool rai::put_sc_info ()
 {
-	bool result =true;
+	bool result = true;
 	std::list<std::string> sc_info;
-	sc_info.push_back("Root_Token");
-	if(sc_info.empty())
-		result=false;
+	sc_info.push_back ("Root_Token");
+	if (sc_info.empty ())
+		result = false;
 	else
-		rai::map_sc_info.insert(std::make_pair(rai::chain_token_type,sc_info));
+		rai::map_sc_info.insert (std::make_pair (rai::chain_token_type, sc_info));
 	return result;
 }
 
-
 //QLINK
-std::list<std::string> rai::get_sc_info(rai::block_hash const & sc_block_hash )
+std::list<std::string> rai::get_sc_info (rai::block_hash const & sc_block_hash)
 {
 	std::list<std::string> sc_info;
-	auto result(rai::put_sc_info());
-	if(result)
+	auto result (rai::put_sc_info ());
+	if (result)
 	{
-		auto existing(rai::map_sc_info.find (sc_block_hash));
+		auto existing (rai::map_sc_info.find (sc_block_hash));
 		if (!(existing == rai::map_sc_info.end ()))
 		{
-			if (!(existing->second.empty()))			
-				sc_info=existing->second;			
+			if (!(existing->second.empty ()))
+				sc_info = existing->second;
 		}
 	}
-	return sc_info;	
-	
+	return sc_info;
 }
 
 //QLINK
-std::string  rai::get_sc_info_name(rai::block_hash const & sc_block_hash )
+std::string rai::get_sc_info_name (rai::block_hash const & sc_block_hash)
 {
-	auto sc_info(get_sc_info(sc_block_hash));
+	auto sc_info (get_sc_info (sc_block_hash));
 	std::string name;
-	if(!sc_info.empty())
+	if (!sc_info.empty ())
 	{
-		name=sc_info.front();
+		name = sc_info.front ();
 	}
 	return name;
 }
@@ -1071,9 +1068,9 @@ void rai::state_block::serialize_json (std::string & string_a) const
 	tree.put ("balance", hashables.balance.to_string_dec ());
 	tree.put ("link", hashables.link.to_string ());
 	tree.put ("link_as_account", hashables.link.to_account ());
-	tree.put ("token", hashables.token_hash.to_string ());	
-	auto name(rai::get_sc_info_name(hashables.token_hash));
-	if(!name.empty())
+	tree.put ("token", hashables.token_hash.to_string ());
+	auto name (rai::get_sc_info_name (hashables.token_hash));
+	if (!name.empty ())
 		tree.put ("Token_name", name);
 	tree.put ("token", hashables.token_hash.to_string ());
 	std::string signature_l;
@@ -1217,8 +1214,8 @@ void rai::smart_contract_hashables::serialize (rai::stream & stream_a) const
 
 void rai::smart_contract_hashables::serialize_json (boost::property_tree::ptree & tree_a) const
 {
-	tree_a.put ("sc_account", sc_account.to_account ());
-	tree_a.put ("sc_owner_account", sc_owner_account.to_account ());
+	tree_a.put ("internal-owned account", sc_account.to_account ());
+	tree_a.put ("external-owned account", sc_owner_account.to_account ());
 	tree_a.put ("abi_hash", abi_hash.to_string ());
 	tree_a.put ("abi_length", abi_length.to_string_dec ());
 	const auto abi_hex_string = rai::stream_to_string_hex (abi);
@@ -1237,13 +1234,25 @@ void rai::smart_contract_hashables::deserialize (bool & error_a, rai::stream & s
 			if (!error_a)
 			{
 				error_a = rai::read (stream_a, abi_length);
-				if (!error_a)
+				auto len = (size_t)abi_length.number ();
+				if (!error_a && len > 0)
 				{
-					// error_a = rai::read (stream_a, abi);
-					auto p1 = static_cast<uint8_t *> (abi.data ());
-					const auto amount_read (stream_a.sgetn (p1, static_cast<std::streamsize> (abi_length.number ())));
-					assert (amount_read != abi_length.number ());
+					// TODO: optimize
+					uint8_t tmp;
+					for (auto i = 0; i < len; i++)
+					{
+						stream_a.sgetn (&tmp, 1);
+						abi.push_back (tmp);
+					}
 				}
+				else
+				{
+					error_a = true;
+				}
+			}
+			else
+			{
+				error_a = true;
 			}
 		}
 	}
@@ -1253,8 +1262,8 @@ void rai::smart_contract_hashables::deserialize_json (bool & error_a, boost::pro
 {
 	try
 	{
-		const auto sc_account_l (tree_a.get<std::string> ("sc_account"));
-		const auto sc_owner_account_l (tree_a.get<std::string> ("sc_owner_account"));
+		const auto sc_account_l (tree_a.get<std::string> ("internal-owned account"));
+		const auto sc_owner_account_l (tree_a.get<std::string> ("external-owned account"));
 		const auto abi_l (tree_a.get<std::string> ("abi"));
 		const auto abi_length_l (tree_a.get<std::string> ("abi_length"));
 		const auto abi_hash_l (tree_a.get<std::string> ("abi_hash"));
@@ -1268,7 +1277,7 @@ void rai::smart_contract_hashables::deserialize_json (bool & error_a, boost::pro
 				if (!error_a)
 				{
 					error_a = abi_hash.decode_hex (abi_hash_l);
-					if(!error_a)
+					if (!error_a)
 					{
 						abi = hex_string_to_stream (abi_l);
 					}

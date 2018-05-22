@@ -245,8 +245,7 @@ void rai::system::generate_send_existing (rai::node & node_a, std::vector<rai::a
 	}
 	if (!amount.is_zero ())
 	{
-		// FIXME: 指定主链 coin 类型
-		auto hash (wallet (0)->send_sync (source, destination, rai::block_hash (0), amount));
+		auto hash (wallet (0)->send_sync (source, destination, rai::chain_token_type, amount));
 		assert (!hash.is_zero ());
 	}
 }
@@ -288,8 +287,7 @@ void rai::system::generate_send_new (rai::node & node_a, std::vector<rai::accoun
 	{
 		auto pub (node_a.wallets.items.begin ()->second->deterministic_insert ());
 		accounts_a.push_back (pub);
-		// FIXME: 指定主链 coin 类型
-		auto hash (wallet (0)->send_sync (source, pub, rai::block_hash (0), amount));
+		auto hash (wallet (0)->send_sync (source, pub, rai::chain_token_type, amount));
 		assert (!hash.is_zero ());
 	}
 }
@@ -473,8 +471,7 @@ void rai::landing::distribute_one ()
 	while (!last.is_zero () && store.last + distribution_interval.count () < now)
 	{
 		auto amount (distribution_amount ((store.last - store.start) >> interval_exponent));
-		// FIXME: 指定主链 coin 类型
-		last = wallet->send_sync (store.source, store.destination, rai::block_hash (0), amount);
+		last = wallet->send_sync (store.source, store.destination, chain_token_type, amount);
 		if (!last.is_zero ())
 		{
 			BOOST_LOG (node.log) << boost::str (boost::format ("Successfully distributed %1% in block %2%") % amount % last.to_string ());

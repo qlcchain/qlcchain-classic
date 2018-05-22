@@ -73,7 +73,6 @@ char const * smart_contrac_block_genesis_data = R"%%%({
     	"work": "ee99d963285bf3d5"
 })%%%";
 
-
 class ledger_constants
 {
 public:
@@ -89,7 +88,7 @@ public:
 	chain_token_type ("3DA3D41A552B0135008A776EBBA7225E7773DBF867D86B9CD8FB650D6BAAD5DB"),
 	genesis_account (rai::rai_network == rai::rai_networks::rai_test_network ? rai_test_account : rai::rai_network == rai::rai_networks::rai_beta_network ? rai_beta_account : rai_live_account),
 	genesis_block (rai::rai_network == rai::rai_networks::rai_test_network ? rai_test_genesis : rai::rai_network == rai::rai_networks::rai_beta_network ? rai_beta_genesis : rai_live_genesis),
-	genesis_smart_contract_block(smart_contrac_block_genesis_data),//QLINK
+	genesis_smart_contract_block (smart_contrac_block_genesis_data), //QLINK
 	genesis_amount (std::numeric_limits<rai::uint128_t>::max ()),
 	burn_account (0)
 	{
@@ -108,11 +107,12 @@ public:
 	std::string rai_live_genesis;
 	rai::account genesis_account;
 	std::string genesis_block;
-	std::string genesis_smart_contract_block;//QLINK
+	std::string genesis_smart_contract_block; //QLINK
 	rai::uint128_t genesis_amount;
 	rai::block_hash not_a_block;
 	rai::account not_an_account;
 	rai::account burn_account;
+	rai::block_hash chain_token_type;
 };
 ledger_constants globals;
 }
@@ -138,10 +138,10 @@ rai::uint128_t const & rai::genesis_amount (globals.genesis_amount);
 rai::block_hash const & rai::not_a_block (globals.not_a_block);
 rai::block_hash const & rai::not_an_account (globals.not_an_account);
 rai::account const & rai::burn_account (globals.burn_account);
-std::string const & rai::genesis_smart_contract_block (globals.genesis_smart_contract_block);//QLINK
+rai::block_hash const & rai::chain_token_type (globals.chain_token_type);
+std::string const & rai::genesis_smart_contract_block (globals.genesis_smart_contract_block); //QLINK
 
-
-std::unordered_map<rai::block_hash,std::list<std::string>> rai::map_sc_info;
+std::unordered_map<rai::block_hash, std::list<std::string>> rai::map_sc_info;
 
 rai::votes::votes (std::shared_ptr<rai::block> block_a) :
 id (block_a->root ())
@@ -224,25 +224,28 @@ rep_block (0),
 open_block (0),
 balance (0),
 modified (0),
-block_count (0)
+block_count (0),
+token_type (0),
+account (0)
 {
 }
 
 rai::account_info::account_info (MDB_val const & val_a)
 {
 	assert (val_a.mv_size == sizeof (*this));
-	// FIXME: 校验长度
-	// static_assert (sizeof (head) + sizeof (rep_block) + sizeof (open_block) + sizeof (balance) + sizeof (modified) + sizeof (block_count) == sizeof (*this), "Class not packed");
+	static_assert (sizeof (head) + sizeof (rep_block) + sizeof (open_block) + sizeof (balance) + sizeof (modified) + sizeof (block_count) + sizeof (token_type) + sizeof (account) == sizeof (*this), "Class not packed");
 	std::copy (reinterpret_cast<uint8_t const *> (val_a.mv_data), reinterpret_cast<uint8_t const *> (val_a.mv_data) + sizeof (*this), reinterpret_cast<uint8_t *> (this));
 }
 
-rai::account_info::account_info (rai::block_hash const & head_a, rai::block_hash const & rep_block_a, rai::block_hash const & open_block_a, rai::amount const & balance_a, uint64_t modified_a, uint64_t block_count_a) :
+rai::account_info::account_info (rai::block_hash const & head_a, rai::block_hash const & rep_block_a, rai::block_hash const & open_block_a, rai::amount const & balance_a, uint64_t modified_a, uint64_t block_count_a, rai::block_hash const & token_hash_a, rai::account const & account_a) :
 head (head_a),
 rep_block (rep_block_a),
 open_block (open_block_a),
 balance (balance_a),
 modified (modified_a),
-block_count (block_count_a)
+block_count (block_count_a),
+token_type (token_hash_a),
+account (account_a)
 {
 }
 
@@ -254,6 +257,8 @@ void rai::account_info::serialize (rai::stream & stream_a) const
 	write (stream_a, balance.bytes);
 	write (stream_a, modified);
 	write (stream_a, block_count);
+	write (stream_a, token_type.bytes);
+	write (stream_a, account.bytes);
 }
 
 bool rai::account_info::deserialize (rai::stream & stream_a)
@@ -274,6 +279,14 @@ bool rai::account_info::deserialize (rai::stream & stream_a)
 					if (!error)
 					{
 						error = read (stream_a, block_count);
+						if (!error)
+						{
+							error = read (stream_a, token_type.bytes);
+							if (!error)
+							{
+								error = read (stream_a, account.bytes);
+							}
+						}
 					}
 				}
 			}
@@ -284,7 +297,7 @@ bool rai::account_info::deserialize (rai::stream & stream_a)
 
 bool rai::account_info::operator== (rai::account_info const & other_a) const
 {
-	return head == other_a.head && rep_block == other_a.rep_block && open_block == other_a.open_block && balance == other_a.balance && modified == other_a.modified && block_count == other_a.block_count;
+	return head == other_a.head && rep_block == other_a.rep_block && open_block == other_a.open_block && balance == other_a.balance && modified == other_a.modified && block_count == other_a.block_count && other_a.token_type == token_type && other_a.account == account;
 }
 
 bool rai::account_info::operator!= (rai::account_info const & other_a) const
@@ -309,7 +322,7 @@ state (0)
 
 size_t rai::block_counts::sum ()
 {
-	return send + receive + open + change + state;
+	return send + receive + open + change + state + smart_contract;
 }
 
 rai::pending_info::pending_info () :
@@ -611,6 +624,8 @@ void rai::amount_visitor::change_block (rai::change_block const & block_a)
 void rai::amount_visitor::compute (rai::block_hash const & block_hash)
 {
 	current_amount = block_hash;
+	rai::genesis genesis;
+	auto genesis_open_hash (genesis.hash ());
 	while (!current_amount.is_zero () || !current_balance.is_zero ())
 	{
 		if (!current_amount.is_zero ())
@@ -622,7 +637,7 @@ void rai::amount_visitor::compute (rai::block_hash const & block_hash)
 			}
 			else
 			{
-				if (block_hash == rai::genesis_account)
+				if (block_hash == genesis_open_hash)
 				{
 					amount = std::numeric_limits<rai::uint128_t>::max ();
 					current_amount = 0;
@@ -643,6 +658,12 @@ void rai::amount_visitor::compute (rai::block_hash const & block_hash)
 			current_balance = 0;
 		}
 	}
+}
+
+void rai::amount_visitor::smart_contract_block (rai::smart_contract_block const & block_a)
+{
+	result = 0;
+	current = 0;
 }
 
 rai::balance_visitor::balance_visitor (MDB_txn * transaction_a, rai::block_store & store_a) :
@@ -900,25 +921,25 @@ rai::genesis::genesis ()
 	std::stringstream istream (rai::genesis_block);
 	boost::property_tree::read_json (istream, tree);
 	auto block (rai::deserialize_block_json (tree));
-	assert (dynamic_cast<rai::open_block *> (block.get ()) != nullptr);
-	open.reset (static_cast<rai::open_block *> (block.release ()));
+	//QLINK：更换创世区块为state block
+	assert (dynamic_cast<rai::state_block *> (block.get ()) != nullptr);
+	state.reset (static_cast<rai::state_block *> (block.release ()));
 }
 
-// FIXME:
 void rai::genesis::initialize (MDB_txn * transaction_a, rai::block_store & store_a) const
 {
 	auto hash_l (hash ());
 	assert (store_a.latest_begin (transaction_a) == store_a.latest_end ());
-	store_a.block_put (transaction_a, hash_l, *open);
-	store_a.account_put (transaction_a, genesis_account, { hash_l, open->hash (), open->hash (), std::numeric_limits<rai::uint128_t>::max (), rai::seconds_since_epoch (), 1 });
+	store_a.block_put (transaction_a, hash_l, *state);
+	store_a.account_put (transaction_a, hash_l, { hash_l, hash_l, hash_l, std::numeric_limits<rai::uint128_t>::max (), rai::seconds_since_epoch (), 1, rai::chain_token_type, genesis_account });
 	store_a.representation_put (transaction_a, genesis_account, std::numeric_limits<rai::uint128_t>::max ());
 	store_a.checksum_put (transaction_a, 0, 0, hash_l);
-	store_a.frontier_put (transaction_a, hash_l, genesis_account);
+	store_a.frontier_put (transaction_a, hash_l, hash_l);
 }
 
 rai::block_hash rai::genesis::hash () const
 {
-	return open->hash ();
+	return state->hash ();
 }
 rai::genesis_sc_block::genesis_sc_block ()
 {
@@ -933,8 +954,8 @@ rai::genesis_sc_block::genesis_sc_block ()
 void rai::genesis_sc_block::initialize (MDB_txn * transaction_a, rai::block_store & store_a) const
 {
 	auto hash_l (hash ());
-//	std::cout<<hash_l.to_string()<<std::endl;
-//	std::cout<<sc_block->to_json ();
+	//	std::cout<<hash_l.to_string()<<std::endl;
+	//	std::cout<<sc_block->to_json ();
 	//assert (store_a.latest_begin (transaction_a) == store_a.latest_end ());
 	store_a.block_put (transaction_a, hash_l, *sc_block);
 }
@@ -943,4 +964,3 @@ rai::block_hash rai::genesis_sc_block::hash () const
 {
 	return sc_block->hash ();
 }
-

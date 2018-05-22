@@ -293,6 +293,23 @@ public:
 	std::set<rai_qt::status_types> active;
 	rai_qt::wallet & wallet;
 };
+class smart_contract_publisher
+{
+public:
+	smart_contract_publisher (rai_qt::wallet &);
+	QWidget * window;
+	QVBoxLayout * layout;
+	QLabel * sc_account_label;
+	QLineEdit * sc_account_line;
+	QLabel * sc_account_owner_label;
+	QLineEdit * sc_account_owner_line;
+	QLabel * abi_path_label;
+	QLineEdit * abi_path_line;
+	QPushButton * publish;
+	QPushButton * publish_back;
+	rai_qt::wallet & wallet;
+};
+
 class wallet : public std::enable_shared_from_this<rai_qt::wallet>
 {
 public:
@@ -319,6 +336,7 @@ public:
 	rai_qt::account_viewer account_viewer;
 	rai_qt::stats_viewer stats_viewer;
 	rai_qt::import import;
+	rai_qt::smart_contract_publisher sc_publisher;
 
 	QApplication & application;
 	QLabel * status;
@@ -342,8 +360,11 @@ public:
 	QLineEdit * send_account;
 	QLabel * send_count_label;
 	QLineEdit * send_count;
+	QLabel * send_token_label;
+	QLineEdit * send_token_type;
 	QPushButton * send_blocks_send;
 	QPushButton * send_blocks_back;
+	QPushButton * smart_contract_button;
 
 	rai_qt::status active_status;
 	void pop_main_stack ();

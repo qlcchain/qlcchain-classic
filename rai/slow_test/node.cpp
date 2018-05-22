@@ -52,7 +52,7 @@ TEST (system, receive_while_synchronizing)
 		ASSERT_EQ (key.pub, wallet->insert_adhoc (key.prv));
 		node1->start ();
 		system.alarm.add (std::chrono::steady_clock::now () + std::chrono::milliseconds (200), ([&system, &key]() {
-			auto hash (system.wallet (0)->send_sync (rai::test_genesis_key.pub, key.pub, system.nodes[0]->config.receive_minimum.number ()));
+			auto hash (system.wallet (0)->send_sync (rai::test_genesis_key.pub, key.pub, rai::chain_token_type, system.nodes[0]->config.receive_minimum.number ()));
 			auto block (system.nodes[0]->store.block_get (rai::transaction (system.nodes[0]->store.environment, nullptr, false), hash));
 			std::string block_text;
 			block->serialize_json (block_text);
@@ -122,7 +122,7 @@ TEST (wallet, multithreaded_send)
 			threads.push_back (std::thread ([wallet_l, &key]() {
 				for (auto i (0); i < 1000; ++i)
 				{
-					wallet_l->send_action (rai::test_genesis_key.pub, key.pub, 1000);
+					wallet_l->send_action (rai::test_genesis_key.pub, key.pub, rai::chain_token_type, 1000);
 				}
 			}));
 		}

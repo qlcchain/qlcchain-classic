@@ -62,7 +62,7 @@ class frontier_req_client;
 class bulk_push_client;
 class smart_contract_client;
 class smart_contract_server;
-// AUTHRO: goreng
+
 class bootstrap_attempt : public std::enable_shared_from_this<bootstrap_attempt>
 {
 public:

@@ -265,7 +265,6 @@ public:
 /**
 * 请求指定的智能合约
 */
-// AUTHOR: goreng
 class smart_contract_req : public message
 {
 public:
@@ -281,7 +280,6 @@ public:
 /**
  * 智能合约 TCP 消息
  */
-// AUTHOR: goreng
 class smart_contract_msg : public message
 {
 public:
@@ -294,7 +292,6 @@ public:
 	 * \brief 智能合约内容
 	 */
 	std::shared_ptr<rai::smart_contract_block> smart_contract;
-	// FIXME: 报文长度？
 	size_t len;
 };
 
@@ -302,7 +299,6 @@ public:
 /**
  * 智能合约响应消息
  */
-// AUTHOR: goreng
 class smart_contract_ack : public message
 {
 public:

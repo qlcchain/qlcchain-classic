@@ -8,16 +8,15 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <streambuf>
 
-
 namespace rai
-{ 
+{
 std::string to_string_hex (uint64_t);
 bool from_string_hex (std::string const &, uint64_t &);
 std::string stream_to_string_hex (std::vector<uint8_t> const &);
 std::vector<uint8_t> hex_string_to_stream (std::string const &);
-std::list<std::string> get_sc_info(rai::block_hash const &);
-bool put_sc_info();
-std::string  get_sc_info_name(rai::block_hash const &);
+std::list<std::string> get_sc_info (rai::block_hash const &);
+bool put_sc_info ();
+std::string get_sc_info_name (rai::block_hash const &);
 
 // We operate on streams of uint8_t by convention
 using stream = std::basic_streambuf<uint8_t>;
@@ -293,7 +292,7 @@ public:
 	bool operator== (rai::block const &) const override;
 	bool operator== (rai::state_block const &) const;
 	bool valid_predecessor (rai::block const &) const override;
-	static size_t constexpr size = sizeof (rai::account) + sizeof (rai::block_hash) + sizeof (rai::account) + sizeof (rai::amount) + sizeof (rai::uint256_union) + sizeof (rai::signature) + sizeof (uint64_t);
+	static size_t constexpr size = sizeof (rai::account) + sizeof (rai::block_hash) + sizeof (rai::account) + sizeof (rai::amount) + sizeof (rai::uint256_union) + sizeof (rai::block_hash) + sizeof (rai::signature) + sizeof (uint64_t);
 	rai::state_hashables hashables;
 	rai::signature signature;
 	uint64_t work;

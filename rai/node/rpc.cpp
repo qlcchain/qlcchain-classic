@@ -281,6 +281,7 @@ void rai::rpc_handler::account_block_count ()
 				boost::property_tree::ptree block_count;
 				total += info.block_count;
 				// FIXME: convert to token name
+				block_count.put ("token", info.open_block.to_string ());
 				block_count.put ("block_count", std::to_string (info.block_count));
 				block_counts.push_back (std::make_pair ("", block_count));
 			}
@@ -1388,12 +1389,12 @@ void rai::rpc_handler::block_create ()
 			{
 				if (abi_text.is_initialized () && !sc_account.is_zero () && !sc_owner_account.is_zero ())
 				{
-					if (work == 0)
-					{
-						work = node.generate_work (previous.is_zero () ? pub : previous);
-					}
 					const auto abi = rai::hex_string_to_stream (abi_text.get ());
 					rai::smart_contract_block block (sc_account, sc_owner_account, abi, prv, pub, work);
+					if (work == 0)
+					{
+						node.work_generate_blocking(block);
+					}
 					boost::property_tree::ptree response_l;
 					response_l.put ("hash", block.hash ().to_string ());
 					std::string contents;

@@ -223,7 +223,7 @@ public:
 	std::mutex mutex;
 	rai::endpoint self;
 	boost::multi_index_container<
-	peer_information,//创建索引针对的类型,
+	peer_information, //创建索引针对的类型,
 	//1、index_by：创建我们需要的索引键
 	//2、ordered_unique：表示创建值唯一的有序索引,
 	//3、ordered_non_unique：表示非唯一索引,创建非唯一索引，允许多个相同的值到此容器中
@@ -370,7 +370,7 @@ public:
 	boost::asio::ip::udp::resolver resolver;
 	rai::node & node;
 	bool on;
-	static uint16_t const node_port = rai::rai_network == rai::rai_networks::rai_live_network ? 7075 : 54000;
+	static uint16_t const node_port = rai::rai_network == rai::rai_networks::rai_live_network ? 29734 : 54000;
 };
 class logging
 {

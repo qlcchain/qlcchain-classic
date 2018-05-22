@@ -49,6 +49,19 @@ public:
 	{
 		++frontier_req_count;
 	}
+	// 查询指定的智能合约
+	void smart_contract_req (rai::smart_contract_req const &){
+
+	};
+	// 推送智能合约到连接的节点
+	void smart_contract (rai::smart_contract_msg const &){
+
+	};
+	// 接收智能合约后的校验结果
+	void smart_contract_ack (rai::smart_contract_ack const &)
+	{
+	}
+
 	uint64_t keepalive_count;
 	uint64_t publish_count;
 	uint64_t confirm_req_count;

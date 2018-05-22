@@ -50,7 +50,7 @@ public:
 			fill_value (block_a);
 		}
 	}
-	// FIXME: 更新智能合约 block predecessor
+	// 更新智能合约 block predecessor
 	void smart_contract_block (rai::smart_contract_block const & block_a) override
 	{
 		if (!store.abi_exists (transaction, block_a.hashables.abi_hash))
@@ -464,7 +464,7 @@ void rai::block_store::upgrade_v5_to_v6 (MDB_txn * transaction_a)
 			assert (block != nullptr);
 			hash = block->previous ();
 		}
-		rai::account_info info (info_old.head, info_old.rep_block, info_old.open_block, info_old.balance, info_old.modified, block_count);
+		rai::account_info info (info_old.head, info_old.rep_block, info_old.open_block, info_old.balance, info_old.modified, block_count, rai::chain_token_type, account);
 		headers.push_back (std::make_pair (account, info));
 	}
 	for (auto i (headers.begin ()), n (headers.end ()); i != n; ++i)
@@ -492,7 +492,7 @@ void rai::block_store::upgrade_v8_to_v9 (MDB_txn * transaction_a)
 	MDB_dbi sequence;
 	mdb_dbi_open (transaction_a, "sequence", MDB_CREATE | MDB_DUPSORT, &sequence);
 	rai::genesis genesis;
-	std::shared_ptr<rai::block> block (std::move (genesis.open));
+	std::shared_ptr<rai::block> block (std::move (genesis.state));
 	rai::keypair junk;
 	for (rai::store_iterator i (transaction_a, sequence), n (nullptr); i != n; ++i)
 	{
@@ -597,7 +597,6 @@ MDB_dbi rai::block_store::block_database (rai::block_type type_a)
 		case rai::block_type::smart_contract:
 			result = smart_contract;
 		default:
-			assert (false);
 			break;
 	}
 	return result;
@@ -933,7 +932,7 @@ void rai::block_store::accounts_del (MDB_txn * transaction_a, rai::account const
 			account_del (transaction_a, info.open_block);
 		}
 	}
-	auto status (mdb_del (transaction_a, assets, rai::mdb_val (account_a), nullptr));
+	auto status (mdb_del (transaction_a, accounts, rai::mdb_val (account_a), nullptr));
 	assert (status == 0);
 }
 
@@ -954,19 +953,22 @@ bool rai::block_store::accounts_get (MDB_txn * transaction_a, rai::account const
 		assert (size > 0);
 		infos_a.clear ();
 		rai::block_hash token_account;
+		auto counter (0);
 		for (auto i = 0; i < size; ++i)
 		{
 			auto flag (rai::read (stream, token_account));
-			if (!flag)
+			if (flag)
 				continue;
 
 			rai::account_info info;
 			flag = account_get (transaction_a, token_account, info);
-			if (flag)
+			if (!flag)
 			{
 				infos_a.push_back (info);
+				++counter;
 			}
 		}
+		result = (counter != size);
 	}
 	return result;
 }
@@ -1028,16 +1030,14 @@ bool rai::block_store::account_get (MDB_txn * transaction_a, rai::account const 
 	rai::mdb_val value;
 	auto status (mdb_get (transaction_a, token_accounts, rai::mdb_val (token_account_a), value));
 	assert (status == 0 || status == MDB_NOTFOUND);
-	bool result;
+	bool result = false;
 	if (status == MDB_NOTFOUND)
 	{
 		result = true;
 	}
 	else
 	{
-		rai::bufferstream stream (reinterpret_cast<uint8_t const *> (value.data ()), value.size ());
-		result = info_a.deserialize (stream);
-		assert (!result);
+		info_a = rai::account_info (value.value);
 	}
 	return result;
 }
@@ -1159,7 +1159,7 @@ bool rai::block_store::pending_get (MDB_txn * transaction_a, rai::pending_key co
 	else
 	{
 		result = false;
-		assert (value.size () == sizeof (pending_a.source.bytes) + sizeof (pending_a.amount.bytes));
+		assert (value.size () == sizeof (pending_a.source.bytes) + sizeof (pending_a.amount.bytes) + sizeof (pending_a.token_type.bytes));
 		rai::bufferstream stream (reinterpret_cast<uint8_t const *> (value.data ()), value.size ());
 		auto error1 (rai::read (stream, pending_a.source));
 		assert (!error1);

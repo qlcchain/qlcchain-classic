@@ -336,7 +336,7 @@ TEST (state_block, serialization)
 {
 	rai::keypair key1;
 	rai::keypair key2;
-	rai::state_block block1 (key1.pub, 1, key2.pub, 2, 4, key1.prv, key1.pub, 5);
+	rai::state_block block1 (key1.pub, 1, key2.pub, 2, 4, rai::chain_token_type, key1.prv, key1.pub, 5);
 	ASSERT_EQ (key1.pub, block1.hashables.account);
 	ASSERT_EQ (rai::block_hash (1), block1.previous ());
 	ASSERT_EQ (key2.pub, block1.hashables.representative);
@@ -347,7 +347,7 @@ TEST (state_block, serialization)
 		rai::vectorstream stream (bytes);
 		block1.serialize (stream);
 	}
-	ASSERT_EQ (0x5, bytes[215]); // Ensure work is serialized big-endian
+	ASSERT_EQ (0x5, bytes[247]); // Ensure work is serialized big-endian
 	ASSERT_EQ (rai::state_block::size, bytes.size ());
 	bool error1;
 	rai::bufferstream stream (bytes.data (), bytes.size ());
@@ -387,7 +387,7 @@ TEST (state_block, serialization)
 TEST (state_block, hashing)
 {
 	rai::keypair key;
-	rai::state_block block (key.pub, 0, key.pub, 0, 0, key.prv, key.pub, 0);
+	rai::state_block block (key.pub, 0, key.pub, 0, 0, rai::chain_token_type, key.prv, key.pub, 0);
 	auto hash (block.hash ());
 	block.hashables.account.bytes[0] ^= 0x1;
 	ASSERT_NE (hash, block.hash ());

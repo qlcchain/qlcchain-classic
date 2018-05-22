@@ -1103,7 +1103,7 @@ rai::block_hash rai::wallet::send_sync (rai::account const & source_a, rai::acco
 }
 
 void rai::wallet::send_async (rai::account const & source_a, rai::account const & account_a, rai::block_hash const & token_hash_a, rai::uint128_t const & amount_a, std::function<void(std::shared_ptr<rai::block>)> const & action_a, bool generate_work_a, boost::optional<std::string> id_a)
-{	
+{
 	this->node.wallets.queue_wallet_action (rai::wallets::high_priority, [this, source_a, account_a, token_hash_a, amount_a, action_a, generate_work_a, id_a]() {
 		auto block (send_action (source_a, account_a, token_hash_a, amount_a, generate_work_a, id_a));
 		action_a (block);

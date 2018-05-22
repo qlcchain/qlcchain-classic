@@ -69,10 +69,7 @@ public:
 	void change_block (rai::change_block const &) override;
 	void state_block (rai::state_block const &) override;
 	void from_send (rai::block_hash const &);
-
-	void smart_contract_block (rai::smart_contract_block const &) override
-	{
-	}
+	void smart_contract_block (rai::smart_contract_block const &) override;
 
 	MDB_txn * transaction;
 	rai::block_store & store;
@@ -130,7 +127,7 @@ public:
 	account_info ();
 	account_info (MDB_val const &);
 	account_info (rai::account_info const &) = default;
-	account_info (rai::block_hash const &, rai::block_hash const &, rai::block_hash const &, rai::amount const &, uint64_t, uint64_t);
+	account_info (rai::block_hash const &, rai::block_hash const &, rai::block_hash const &, rai::amount const &, uint64_t, uint64_t, rai::block_hash const &, rai::account const &);
 	void serialize (rai::stream &) const;
 	bool deserialize (rai::stream &);
 	bool operator== (rai::account_info const &) const;
@@ -350,15 +347,17 @@ extern rai::uint128_t const & genesis_amount;
 extern rai::block_hash const & not_a_block;
 // An account number that compares inequal to any real account number
 extern rai::block_hash const & not_an_account;
-extern std::string const & genesis_smart_contract_block;//QLINK
-extern std::unordered_map<rai::block_hash,std::list<std::string>> map_sc_info;
+extern rai::block_hash const & chain_token_type;
+extern std::string const & genesis_smart_contract_block; //QLINK
+extern std::unordered_map<rai::block_hash, std::list<std::string>> map_sc_info;
 class genesis
 {
 public:
 	explicit genesis ();
 	void initialize (MDB_txn *, rai::block_store &) const;
 	rai::block_hash hash () const;
-	std::unique_ptr<rai::open_block> open;
+	//QLINK:更换创世区块位state block
+	std::unique_ptr<rai::state_block> state;
 };
 //QLINK：增加创世区块对应的智能合约块的初始化信息
 class genesis_sc_block
@@ -369,5 +368,4 @@ public:
 	rai::block_hash hash () const;
 	std::unique_ptr<rai::smart_contract_block> sc_block;
 };
-
 }

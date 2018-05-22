@@ -108,11 +108,24 @@ wallet (wallet_a)
 
 void rai_qt::self_pane::refresh_balance ()
 {
-	auto balance (wallet.node.balance_pending (wallet.account));
-	auto final_text (std::string ("Balance: ") + wallet.format_balance (balance.first));
-	if (!balance.second.is_zero ())
+	rai::transaction transaction (wallet.node.store.environment, nullptr, false);
+	std::vector<rai::account_info> infos;
+	auto error (wallet.node.store.accounts_get (transaction, wallet.account, infos));
+	auto final_text (std::string ("Balances: "));
+
+	if (!error)
 	{
-		final_text += "\nPending: " + wallet.format_balance (balance.second);
+		// balance to string
+		for (auto & info : infos)
+		{
+			auto balance (wallet.node.balance_pending (info.open_block));
+			final_text += "Balance: " + get_sc_info_name (info.token_type) + " -> " + wallet.format_balance (balance.first);
+			if (!balance.second.is_zero ())
+			{
+				final_text += " Pending: " + wallet.format_balance (balance.second);
+			}
+			final_text += "\n";
+		}
 	}
 	wallet.self.balance_label->setText (QString (final_text.c_str ()));
 }
@@ -137,6 +150,7 @@ wallet (wallet_a)
 	separator->setFrameShadow (QFrame::Sunken);
 	model->setHorizontalHeaderItem (0, new QStandardItem ("Balance"));
 	model->setHorizontalHeaderItem (1, new QStandardItem ("Account"));
+	model->setHorizontalHeaderItem (2, new QStandardItem ("Token type"));
 	view->setEditTriggers (QAbstractItemView::NoEditTriggers);
 	view->setModel (model);
 	view->verticalHeader ()->hide ();
@@ -253,18 +267,41 @@ void rai_qt::accounts::refresh_wallet_balance ()
 	rai::transaction transaction (this->wallet.wallet_m->store.environment, nullptr, false);
 	rai::uint128_t balance (0);
 	rai::uint128_t pending (0);
+	std::map<rai::account, std::pair<rai::uint128_t, rai::uint128_t>> balances;
 	for (auto i (this->wallet.wallet_m->store.begin (transaction)), j (this->wallet.wallet_m->store.end ()); i != j; ++i)
 	{
 		rai::public_key key (i->first.uint256 ());
-		balance = balance + (this->wallet.node.ledger.account_balance (transaction, key));
-		pending = pending + (this->wallet.node.ledger.account_pending (transaction, key));
+		std::vector<rai::account_info> infos;
+		auto error (wallet.node.store.accounts_get (transaction, key, infos));
+		if (!error && !infos.empty ())
+		{
+			for (auto & info : infos)
+			{
+				auto token_account (info.open_block);
+				if (balances.find (token_account) != balances.end ())
+				{
+					balances[token_account].first += this->wallet.node.ledger.account_balance (transaction, token_account);
+					balances[token_account].second += this->wallet.node.ledger.account_pending (transaction, token_account);
+				}
+				else
+				{
+					balances[token_account] = std::make_pair (balance, pending);
+				}
+			}
+		}
 	}
-	auto final_text (std::string ("Balance: ") + wallet.format_balance (balance));
-	if (!pending.is_zero ())
+	auto final_text (std::string (""));
+	for (const auto & b : balances)
 	{
-		final_text += "\nPending: " + wallet.format_balance (pending);
+		final_text += "Total: [Balance] -> " + wallet.format_balance (b.second.first);
+		auto p (b.second.second);
+		if (!p.is_zero ())
+		{
+			final_text += "; [Pending] -> " + wallet.format_balance (p);
+		}
 	}
 	wallet_balance_label->setText (QString (final_text.c_str ()));
+
 	this->wallet.node.alarm.add (std::chrono::steady_clock::now () + std::chrono::seconds (60), [this]() {
 		this->wallet.application.postEvent (&this->wallet.processor, new eventloop_event ([this]() {
 			refresh_wallet_balance ();
@@ -280,31 +317,41 @@ void rai_qt::accounts::refresh ()
 	for (auto i (wallet.wallet_m->store.begin (transaction)), j (wallet.wallet_m->store.end ()); i != j; ++i)
 	{
 		rai::public_key key (i->first.uint256 ());
-		auto balance_amount (wallet.node.ledger.account_balance (transaction, key));
-		bool display (true);
-		switch (wallet.wallet_m->store.key_type (i->second))
+		std::vector<rai::account_info> infos;
+		auto error (wallet.node.store.accounts_get (transaction, key, infos));
+		if (!error && !infos.empty ())
 		{
-			case rai::key_type::adhoc:
+			for (auto & info : infos)
 			{
-				brush.setColor ("red");
-				display = !balance_amount.is_zero ();
-				break;
+				auto balance_amount (wallet.node.ledger.account_balance (transaction, info.open_block));
+				bool display (true);
+				switch (wallet.wallet_m->store.key_type (i->second))
+				{
+					case rai::key_type::adhoc:
+					{
+						brush.setColor ("red");
+						display = !balance_amount.is_zero ();
+						break;
+					}
+					default:
+					{
+						brush.setColor ("black");
+						break;
+					}
+				}
+				if (display)
+				{
+					QList<QStandardItem *> items;
+					std::string balance = wallet.format_balance (balance_amount);
+					items.push_back (new QStandardItem (balance.c_str ()));
+					auto account (new QStandardItem (QString (key.to_account ().c_str ())));
+					account->setForeground (brush);
+					items.push_back (account);
+					auto token (new QStandardItem (QString (info.token_type.to_string ().c_str ())));
+					items.push_back (token);
+					model->appendRow (items);
+				}
 			}
-			default:
-			{
-				brush.setColor ("black");
-				break;
-			}
-		}
-		if (display)
-		{
-			QList<QStandardItem *> items;
-			std::string balance = wallet.format_balance (balance_amount);
-			items.push_back (new QStandardItem (balance.c_str ()));
-			auto account (new QStandardItem (QString (key.to_account ().c_str ())));
-			account->setForeground (brush);
-			items.push_back (account);
-			model->appendRow (items);
 		}
 	}
 }
@@ -498,19 +545,19 @@ public:
 	ledger (ledger_a)
 	{
 	}
-	void send_block (rai::send_block const & block_a)
+	void send_block (rai::send_block const & block_a) override
 	{
 		type = "Send";
 		account = block_a.hashables.destination;
 		amount = ledger.amount (transaction, block_a.hash ());
 	}
-	void receive_block (rai::receive_block const & block_a)
+	void receive_block (rai::receive_block const & block_a) override
 	{
 		type = "Receive";
 		account = ledger.account (transaction, block_a.source ());
 		amount = ledger.amount (transaction, block_a.source ());
 	}
-	void open_block (rai::open_block const & block_a)
+	void open_block (rai::open_block const & block_a) override
 	{
 		type = "Receive";
 		if (block_a.hashables.source != rai::genesis_account)
@@ -524,13 +571,13 @@ public:
 			amount = rai::genesis_amount;
 		}
 	}
-	void change_block (rai::change_block const & block_a)
+	void change_block (rai::change_block const & block_a) override
 	{
 		type = "Change";
 		amount = 0;
 		account = block_a.hashables.representative;
 	}
-	void state_block (rai::state_block const & block_a)
+	void state_block (rai::state_block const & block_a) override
 	{
 		auto balance (block_a.hashables.balance.number ());
 		auto previous_balance (ledger.balance (transaction, block_a.hashables.previous));
@@ -556,9 +603,11 @@ public:
 		}
 	}
 
-	// TODO: 智能合约信息显示
-	void smart_contract_block (rai::smart_contract_block const &) override
+	void smart_contract_block (rai::smart_contract_block const & block_a) override
 	{
+		type = "Smart Contract";
+		amount = 0;
+		account = block_a.hashables.sc_owner_account;
 	}
 	MDB_txn * transaction;
 	rai::ledger & ledger;
@@ -572,22 +621,28 @@ void rai_qt::history::refresh ()
 {
 	rai::transaction transaction (ledger.store.environment, nullptr, false);
 	model->removeRows (0, model->rowCount ());
-	auto hash (ledger.latest (transaction, account));
-	short_text_visitor visitor (transaction, ledger);
-	for (auto i (0), n (tx_count->value ()); i < n && !hash.is_zero (); ++i)
+	std::vector<rai::account_info> infos;
+	ledger.store.accounts_get (transaction, account, infos);
+
+	for (auto & info : infos)
 	{
-		QList<QStandardItem *> items;
-		auto block (ledger.store.block_get (transaction, hash));
-		assert (block != nullptr);
-		block->visit (visitor);
-		items.push_back (new QStandardItem (QString (visitor.type.c_str ())));
-		items.push_back (new QStandardItem (QString (visitor.account.to_account ().c_str ())));
-		auto balanceItem = new QStandardItem (QString (wallet.format_balance (visitor.amount).c_str ()));
-		balanceItem->setData (Qt::AlignRight, Qt::TextAlignmentRole);
-		items.push_back (balanceItem);
-		items.push_back (new QStandardItem (QString (hash.to_string ().c_str ())));
-		hash = block->previous ();
-		model->appendRow (items);
+		auto hash (ledger.latest (transaction, info.open_block));
+		short_text_visitor visitor (transaction, ledger);
+		for (auto i (0), n (tx_count->value ()); i < n && !hash.is_zero (); ++i)
+		{
+			QList<QStandardItem *> items;
+			auto block (ledger.store.block_get (transaction, hash));
+			assert (block != nullptr);
+			block->visit (visitor);
+			items.push_back (new QStandardItem (QString (visitor.type.c_str ())));
+			items.push_back (new QStandardItem (QString (visitor.account.to_account ().c_str ())));
+			auto balanceItem = new QStandardItem (QString (wallet.format_balance (visitor.amount).c_str ()));
+			balanceItem->setData (Qt::AlignRight, Qt::TextAlignmentRole);
+			items.push_back (balanceItem);
+			items.push_back (new QStandardItem (QString (hash.to_string ().c_str ())));
+			hash = block->previous ();
+			model->appendRow (items);
+		}
 	}
 }
 
@@ -938,6 +993,115 @@ std::string rai_qt::status::color ()
 	return result;
 }
 
+rai_qt::smart_contract_publisher::smart_contract_publisher (rai_qt::wallet & wallet_a) :
+window (new QWidget),
+layout (new QVBoxLayout),
+sc_account_label (new QLabel ("Internal-owned account: ")),
+sc_account_line (new QLineEdit),
+sc_account_owner_label (new QLabel ("External-owned account: ")),
+sc_account_owner_line (new QLineEdit),
+abi_path_label (new QLabel ("Smart Contract abi file path: ")),
+abi_path_line (new QLineEdit),
+publish (new QPushButton ("Publish")),
+publish_back (new QPushButton ("Back")),
+wallet (wallet_a)
+{
+	layout->addWidget (sc_account_label);
+	sc_account_line->setPlaceholderText (rai::zero_key.pub.to_account ().c_str ());
+	layout->addWidget (sc_account_line);
+	layout->addWidget (sc_account_owner_label);
+	sc_account_owner_line->setPlaceholderText (rai::zero_key.pub.to_account ().c_str ());
+	layout->addWidget (sc_account_owner_line);
+	layout->addWidget (abi_path_label);
+	layout->addWidget (abi_path_line);
+	layout->addWidget (publish);
+	layout->addStretch ();
+	layout->addWidget (publish_back);
+	layout->setContentsMargins (0, 0, 0, 0);
+	window->setLayout (layout);
+
+	QObject::connect (publish, &QPushButton::released, [this]() {
+		show_line_ok (*this->sc_account_line);
+		show_line_ok (*this->sc_account_owner_line);
+		show_line_ok (*this->abi_path_line);
+		rai::account sc_account;
+		rai::account sc_owner_account;
+		auto sc_account_text (this->sc_account_line->text ());
+		std::string sc_account_text_narrow (sc_account_text.toLocal8Bit ());
+		if (!sc_account.decode_account (sc_account_text_narrow))
+		{
+			show_line_ok (*this->sc_account_line);
+			auto sc_owner_account_text (this->sc_account_owner_line->text ());
+			const std::string sc_owner_account_text_narrow (sc_owner_account_text.toLocal8Bit ());
+			if (!sc_owner_account.decode_account (sc_owner_account_text_narrow))
+			{
+				show_line_ok (*this->sc_account_owner_line);
+				std::ifstream stream;
+				stream.open (this->abi_path_line->text ().toStdString ().c_str ());
+				if (!stream.fail ())
+				{
+					show_line_ok (*this->abi_path_line);
+					std::stringstream contents;
+					contents << stream.rdbuf ();
+					const auto abi = rai::hex_string_to_stream (contents.str ());
+
+					rai::transaction transaction (this->wallet.wallet_m->node.store.environment, nullptr, false);
+					rai::raw_key key;
+					if (!wallet.wallet_m->store.fetch (transaction, sc_owner_account, key))
+					{
+						rai::account_info info;
+						auto error (this->wallet.wallet_m->node.store.accounts_get (transaction, sc_account, rai::chain_token_type, info));
+						assert (!error);
+						rai::smart_contract_block sc_block (sc_account, sc_owner_account, abi, key, sc_account, 0);
+						this->wallet.wallet_m->node.work_generate_blocking (sc_block);
+						std::string block_l;
+						sc_block.serialize_json (block_l);
+						// FIXME: 推送
+					}
+				}
+				else
+				{
+					show_button_error (*publish);
+					publish->setText ("Bad abi file path");
+					this->wallet.node.alarm.add (std::chrono::steady_clock::now () + std::chrono::seconds (5), [this]() {
+						this->wallet.application.postEvent (&this->wallet.processor, new eventloop_event ([this]() {
+							show_button_ok (*publish);
+							publish->setText ("Publish");
+						}));
+					});
+				}
+			}
+			else
+			{
+				show_button_error (*publish);
+				publish->setText ("Bad External-owned account");
+				this->wallet.node.alarm.add (std::chrono::steady_clock::now () + std::chrono::seconds (5), [this]() {
+					this->wallet.application.postEvent (&this->wallet.processor, new eventloop_event ([this]() {
+						show_button_ok (*publish);
+						publish->setText ("Publish");
+					}));
+				});
+			}
+		}
+		else
+		{
+			show_button_error (*publish);
+			publish->setText ("Bad Internal-owned account");
+			this->wallet.node.alarm.add (std::chrono::steady_clock::now () + std::chrono::seconds (5), [this]() {
+				this->wallet.application.postEvent (&this->wallet.processor, new eventloop_event ([this]() {
+					show_button_ok (*publish);
+					publish->setText ("Publish");
+				}));
+			});
+		}
+	});
+
+	QObject::connect (publish_back, &QPushButton::released, [this]() {
+		assert (this->wallet.main_stack->currentWidget () == window);
+		this->wallet.pop_main_stack ();
+	});
+}
+
 rai_qt::wallet::wallet (QApplication & application_a, rai_qt::eventloop_processor & processor_a, rai::node & node_a, std::shared_ptr<rai::wallet> wallet_a, rai::account & account_a) :
 rendering_ratio (rai::Mxrb_ratio),
 node (node_a),
@@ -974,9 +1138,13 @@ send_account_label (new QLabel ("Destination account:")),
 send_account (new QLineEdit),
 send_count_label (new QLabel ("Amount:")),
 send_count (new QLineEdit),
+send_token_label (new QLabel ("Token Type:")),
+send_token_type (new QLineEdit),
 send_blocks_send (new QPushButton ("Send")),
 send_blocks_back (new QPushButton ("Back")),
-active_status (*this)
+active_status (*this),
+sc_publisher (*this),
+smart_contract_button (new QPushButton ("Publish Smart Contract"))
 {
 	update_connected ();
 	empty_password ();
@@ -987,6 +1155,9 @@ active_status (*this)
 	send_blocks_layout->addWidget (send_count_label);
 	send_count->setPlaceholderText ("0");
 	send_blocks_layout->addWidget (send_count);
+	send_blocks_layout->addWidget (send_token_label);
+	send_blocks_layout->addWidget (send_token_type);
+	send_token_type->setPlaceholderText (rai::chain_token_type.to_string ().c_str ());
 	send_blocks_layout->addWidget (send_blocks_send);
 	send_blocks_layout->addStretch ();
 	send_blocks_layout->addWidget (send_blocks_back);
@@ -999,6 +1170,7 @@ active_status (*this)
 	entry_window_layout->addWidget (settings_button);
 	entry_window_layout->addWidget (accounts_button);
 	entry_window_layout->addWidget (show_advanced);
+	entry_window_layout->addWidget (smart_contract_button);
 	entry_window_layout->setContentsMargins (0, 0, 0, 0);
 	entry_window_layout->setSpacing (5);
 	entry_window->setLayout (entry_window_layout);
@@ -1032,6 +1204,12 @@ active_status (*this)
 void rai_qt::wallet::start ()
 {
 	std::weak_ptr<rai_qt::wallet> this_w (shared_from_this ());
+	QObject::connect (smart_contract_button, &QPushButton::released, [this_w]() {
+		if (auto this_l = this_w.lock ())
+		{
+			this_l->push_main_stack (this_l->sc_publisher.window);
+		}
+	});
 	QObject::connect (settings_button, &QPushButton::released, [this_w]() {
 		if (auto this_l = this_w.lock ())
 		{
@@ -1055,7 +1233,9 @@ void rai_qt::wallet::start ()
 		{
 			show_line_ok (*this_l->send_count);
 			show_line_ok (*this_l->send_account);
+			show_line_ok (*this_l->send_token_type);
 			rai::amount amount;
+			rai::block_hash token_type;
 			if (!amount.decode_dec (this_l->send_count->text ().toStdString ()))
 			{
 				rai::uint128_t actual (amount.number () * this_l->rendering_ratio);
@@ -1067,46 +1247,69 @@ void rai_qt::wallet::start ()
 					auto parse_error (account_l.decode_account (account_text_narrow));
 					if (!parse_error)
 					{
-						auto balance (this_l->node.balance (this_l->account));
-						if (actual <= balance)
+						QString token_type_text (this_l->send_token_type->text ());
+						std::string token_type_text_narrow (account_text.toLocal8Bit ());
+						parse_error = token_type.decode_hex (token_type_text_narrow);
+						if (!parse_error)
 						{
-							rai::transaction transaction (this_l->wallet_m->store.environment, nullptr, false);
-							if (this_l->wallet_m->store.valid_password (transaction))
+							auto balance (this_l->node.balance (this_l->account));
+							if (actual <= balance)
 							{
-								this_l->send_blocks_send->setEnabled (false);
-								this_l->node.background ([this_w, account_l, actual]() {
-									if (auto this_l = this_w.lock ())
-									{
-										// FIXME: 根据 UI 获取 token_hash
-										this_l->wallet_m->send_async (this_l->account, account_l, rai::block_hash (0), actual, [this_w](std::shared_ptr<rai::block> block_a) {
-											if (auto this_l = this_w.lock ())
-											{
-												auto succeeded (block_a != nullptr);
-												this_l->application.postEvent (&this_l->processor, new eventloop_event ([this_w, succeeded]() {
-													if (auto this_l = this_w.lock ())
-													{
-														this_l->send_blocks_send->setEnabled (true);
-														if (succeeded)
+								rai::transaction transaction (this_l->wallet_m->store.environment, nullptr, false);
+								if (this_l->wallet_m->store.valid_password (transaction))
+								{
+									this_l->send_blocks_send->setEnabled (false);
+									this_l->node.background ([this_w, account_l, token_type, actual]() {
+										if (auto this_l = this_w.lock ())
+										{
+											this_l->wallet_m->send_async (this_l->account, account_l, token_type, actual, [this_w](std::shared_ptr<rai::block> block_a) {
+												if (auto this_l = this_w.lock ())
+												{
+													auto succeeded (block_a != nullptr);
+													this_l->application.postEvent (&this_l->processor, new eventloop_event ([this_w, succeeded]() {
+														if (auto this_l = this_w.lock ())
 														{
-															this_l->send_count->clear ();
-															this_l->send_account->clear ();
-															this_l->accounts.refresh ();
+															this_l->send_blocks_send->setEnabled (true);
+															if (succeeded)
+															{
+																this_l->send_count->clear ();
+																this_l->send_account->clear ();
+																this_l->accounts.refresh ();
+															}
+															else
+															{
+																show_line_error (*this_l->send_count);
+															}
 														}
-														else
-														{
-															show_line_error (*this_l->send_count);
-														}
-													}
-												}));
-											}
-										});
-									}
-								});
+													}));
+												}
+											});
+										}
+									});
+								}
+								else
+								{
+									show_button_error (*this_l->send_blocks_send);
+									this_l->send_blocks_send->setText ("Wallet is locked, unlock it to send");
+									this_l->node.alarm.add (std::chrono::steady_clock::now () + std::chrono::seconds (5), [this_w]() {
+										if (auto this_l = this_w.lock ())
+										{
+											this_l->application.postEvent (&this_l->processor, new eventloop_event ([this_w]() {
+												if (auto this_l = this_w.lock ())
+												{
+													show_button_ok (*this_l->send_blocks_send);
+													this_l->send_blocks_send->setText ("Send");
+												}
+											}));
+										}
+									});
+								}
 							}
 							else
 							{
+								show_line_error (*this_l->send_count);
 								show_button_error (*this_l->send_blocks_send);
-								this_l->send_blocks_send->setText ("Wallet is locked, unlock it to send");
+								this_l->send_blocks_send->setText ("Not enough balance");
 								this_l->node.alarm.add (std::chrono::steady_clock::now () + std::chrono::seconds (5), [this_w]() {
 									if (auto this_l = this_w.lock ())
 									{
@@ -1123,9 +1326,9 @@ void rai_qt::wallet::start ()
 						}
 						else
 						{
-							show_line_error (*this_l->send_count);
+							show_line_error (*this_l->send_token_type);
 							show_button_error (*this_l->send_blocks_send);
-							this_l->send_blocks_send->setText ("Not enough balance");
+							this_l->send_blocks_send->setText ("Bad token type");
 							this_l->node.alarm.add (std::chrono::steady_clock::now () + std::chrono::seconds (5), [this_w]() {
 								if (auto this_l = this_w.lock ())
 								{
@@ -1334,6 +1537,7 @@ void rai_qt::wallet::start ()
 		}
 	};
 	settings_button->setToolTip ("Unlock wallet, set password, change representative");
+	smart_contract_button->setToolTip ("Publish smart contract to Chain");
 }
 
 void rai_qt::wallet::refresh ()
@@ -1680,7 +1884,7 @@ peers_window (new QWidget),
 peers_layout (new QVBoxLayout),
 peers_model (new QStandardItemModel),
 peers_view (new QTableView),
-bootstrap_label (new QLabel ("IPV6:port \"::ffff:192.168.0.1:7075\"")),
+bootstrap_label (new QLabel ("IPV6:port \"::ffff:192.168.0.1:29734\"")),
 bootstrap_line (new QLineEdit),
 peers_bootstrap (new QPushButton ("Initiate Bootstrap")),
 peers_refresh (new QPushButton ("Refresh")),
