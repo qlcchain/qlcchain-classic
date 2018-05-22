@@ -8,12 +8,17 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <streambuf>
 
+
 namespace rai
-{
+{ 
 std::string to_string_hex (uint64_t);
 bool from_string_hex (std::string const &, uint64_t &);
 std::string stream_to_string_hex (std::vector<uint8_t> const &);
 std::vector<uint8_t> hex_string_to_stream (std::string const &);
+std::list<std::string> get_sc_info(rai::block_hash const &);
+bool put_sc_info();
+std::string  get_sc_info_name(rai::block_hash const &);
+
 // We operate on streams of uint8_t by convention
 using stream = std::basic_streambuf<uint8_t>;
 // Read a raw byte stream the size of `T' and fill value.

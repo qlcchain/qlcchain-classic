@@ -49,13 +49,30 @@ char const * live_genesis_data = R"%%%({
 #endif
 
 char const * live_genesis_data = R"%%%({
-	"type": "open",
-	"source": "1327950B79C7A18C61C26965E274F38E0D8C618CDD72BA17E00E2F3655CE0B78",
-	"representative": "xrb_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
-	"account": "xrb_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
-	"work": "5d221b53ba6a0618",
-	"signature": "1728D62A1770BE460C273E5B8F688CFDFF9A6750A6FA2FCBC748A6B98B6E12474A3D0EBE06308419E27CA4E080017ECC0249BDCED6FB90B5D5B345AEFD1B2809"
+		"type": "state",
+		"account": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
+		"previous": "0000000000000000000000000000000000000000000000000000000000000000",
+		"representative": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
+		"balance": "340282366920938463463374607431768211455",
+		"link": "1327950B79C7A18C61C26965E274F38E0D8C618CDD72BA17E00E2F3655CE0B78",
+		"link_as_account": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
+		"token": "3DA3D41A552B0135008A776EBBA7225E7773DBF867D86B9CD8FB650D6BAAD5DB",
+		"signature": "766AC05375B5BBED2A7F870A541DE1FE36FDB853300A76B17F698EDF944ED8419B78C721EFB37C532F205D7E360A6A3BF0DF8ABFEC2C0C0C5791F947D9344803",
+		"work": "f170a158fa6bead1"
 })%%%";
+
+//QLINK:增加smart contract block的初始信息
+char const * smart_contrac_block_genesis_data = R"%%%({
+    	"type": "smart_contract",
+    	"internal-owned account": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
+    	"external-owned account": "qlc_3sczdr37zykkha4im7jnbta6ian8rbnhbk9qmcbs5fqpkehowak8qacp864g",
+    	"abi_hash": "FFF8FF5DF1B6ED4FC7F300848931416581AE742999A2399563842F579E018D6B",
+    	"abi_length": "64",
+    	"abi": "6060604052341561000F57600080FD5B336000806101000A81548173FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF021916908373FFFFFFFFFFFFFFFFFFFF",
+    	"signature": "16B015C487C06829406D62CB3BD41736942C285A6328F9E855FEB5870724FA66131AFC15027BDBB97C1E1539A19C0C961362AD23BE55D1C986614FFC5E3AAA06",
+    	"work": "ee99d963285bf3d5"
+})%%%";
+
 
 class ledger_constants
 {
@@ -69,8 +86,10 @@ public:
 	rai_test_genesis (test_genesis_data),
 	rai_beta_genesis (beta_genesis_data),
 	rai_live_genesis (live_genesis_data),
+	chain_token_type ("3DA3D41A552B0135008A776EBBA7225E7773DBF867D86B9CD8FB650D6BAAD5DB"),
 	genesis_account (rai::rai_network == rai::rai_networks::rai_test_network ? rai_test_account : rai::rai_network == rai::rai_networks::rai_beta_network ? rai_beta_account : rai_live_account),
 	genesis_block (rai::rai_network == rai::rai_networks::rai_test_network ? rai_test_genesis : rai::rai_network == rai::rai_networks::rai_beta_network ? rai_beta_genesis : rai_live_genesis),
+	genesis_smart_contract_block(smart_contrac_block_genesis_data),//QLINK
 	genesis_amount (std::numeric_limits<rai::uint128_t>::max ()),
 	burn_account (0)
 	{
@@ -89,6 +108,7 @@ public:
 	std::string rai_live_genesis;
 	rai::account genesis_account;
 	std::string genesis_block;
+	std::string genesis_smart_contract_block;//QLINK
 	rai::uint128_t genesis_amount;
 	rai::block_hash not_a_block;
 	rai::account not_an_account;
@@ -118,6 +138,10 @@ rai::uint128_t const & rai::genesis_amount (globals.genesis_amount);
 rai::block_hash const & rai::not_a_block (globals.not_a_block);
 rai::block_hash const & rai::not_an_account (globals.not_an_account);
 rai::account const & rai::burn_account (globals.burn_account);
+std::string const & rai::genesis_smart_contract_block (globals.genesis_smart_contract_block);//QLINK
+
+
+std::unordered_map<rai::block_hash,std::list<std::string>> rai::map_sc_info;
 
 rai::votes::votes (std::shared_ptr<rai::block> block_a) :
 id (block_a->root ())
@@ -896,3 +920,27 @@ rai::block_hash rai::genesis::hash () const
 {
 	return open->hash ();
 }
+rai::genesis_sc_block::genesis_sc_block ()
+{
+	boost::property_tree::ptree tree;
+	std::stringstream istream (rai::genesis_smart_contract_block);
+	boost::property_tree::read_json (istream, tree);
+	auto block (rai::deserialize_block_json (tree));
+	assert (dynamic_cast<rai::smart_contract_block *> (block.get ()) != nullptr);
+	sc_block.reset (static_cast<rai::smart_contract_block *> (block.release ()));
+}
+
+void rai::genesis_sc_block::initialize (MDB_txn * transaction_a, rai::block_store & store_a) const
+{
+	auto hash_l (hash ());
+//	std::cout<<hash_l.to_string()<<std::endl;
+//	std::cout<<sc_block->to_json ();
+	//assert (store_a.latest_begin (transaction_a) == store_a.latest_end ());
+	store_a.block_put (transaction_a, hash_l, *sc_block);
+}
+
+rai::block_hash rai::genesis_sc_block::hash () const
+{
+	return sc_block->hash ();
+}
+

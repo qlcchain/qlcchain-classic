@@ -223,7 +223,12 @@ public:
 	std::mutex mutex;
 	rai::endpoint self;
 	boost::multi_index_container<
-	peer_information,
+	peer_information,//创建索引针对的类型,
+	//1、index_by：创建我们需要的索引键
+	//2、ordered_unique：表示创建值唯一的有序索引,
+	//3、ordered_non_unique：表示非唯一索引,创建非唯一索引，允许多个相同的值到此容器中
+	//4、hashed_unique：
+	//5、random_access：
 	boost::multi_index::indexed_by<
 	boost::multi_index::hashed_unique<boost::multi_index::member<peer_information, rai::endpoint, &peer_information::endpoint>>,
 	boost::multi_index::ordered_non_unique<boost::multi_index::member<peer_information, std::chrono::steady_clock::time_point, &peer_information::last_contact>>,

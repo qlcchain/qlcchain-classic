@@ -350,6 +350,8 @@ extern rai::uint128_t const & genesis_amount;
 extern rai::block_hash const & not_a_block;
 // An account number that compares inequal to any real account number
 extern rai::block_hash const & not_an_account;
+extern std::string const & genesis_smart_contract_block;//QLINK
+extern std::unordered_map<rai::block_hash,std::list<std::string>> map_sc_info;
 class genesis
 {
 public:
@@ -358,4 +360,14 @@ public:
 	rai::block_hash hash () const;
 	std::unique_ptr<rai::open_block> open;
 };
+//QLINK：增加创世区块对应的智能合约块的初始化信息
+class genesis_sc_block
+{
+public:
+	explicit genesis_sc_block ();
+	void initialize (MDB_txn *, rai::block_store &) const;
+	rai::block_hash hash () const;
+	std::unique_ptr<rai::smart_contract_block> sc_block;
+};
+
 }

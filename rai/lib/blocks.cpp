@@ -75,6 +75,51 @@ std::vector<uint8_t> rai::hex_string_to_stream (std::string const & hexstring)
 	return std::vector<uint8_t> (hex_code.begin (), hex_code.end ());
 }
 
+
+//QLINK
+bool rai::put_sc_info()
+{
+	bool result =true;
+	std::list<std::string> sc_info;
+	sc_info.push_back("Root_Token");
+	if(sc_info.empty())
+		result=false;
+	else
+		rai::map_sc_info.insert(std::make_pair(rai::chain_token_type,sc_info));
+	return result;
+}
+
+
+//QLINK
+std::list<std::string> rai::get_sc_info(rai::block_hash const & sc_block_hash )
+{
+	std::list<std::string> sc_info;
+	auto result(rai::put_sc_info());
+	if(result)
+	{
+		auto existing(rai::map_sc_info.find (sc_block_hash));
+		if (!(existing == rai::map_sc_info.end ()))
+		{
+			if (!(existing->second.empty()))			
+				sc_info=existing->second;			
+		}
+	}
+	return sc_info;	
+	
+}
+
+//QLINK
+std::string  rai::get_sc_info_name(rai::block_hash const & sc_block_hash )
+{
+	auto sc_info(get_sc_info(sc_block_hash));
+	std::string name;
+	if(!sc_info.empty())
+	{
+		name=sc_info.front();
+	}
+	return name;
+}
+
 std::string rai::block::to_json ()
 {
 	std::string result;
@@ -1026,6 +1071,10 @@ void rai::state_block::serialize_json (std::string & string_a) const
 	tree.put ("balance", hashables.balance.to_string_dec ());
 	tree.put ("link", hashables.link.to_string ());
 	tree.put ("link_as_account", hashables.link.to_account ());
+	tree.put ("token", hashables.token_hash.to_string ());	
+	auto name(rai::get_sc_info_name(hashables.token_hash));
+	if(!name.empty())
+		tree.put ("Token_name", name);
 	tree.put ("token", hashables.token_hash.to_string ());
 	std::string signature_l;
 	signature.encode_hex (signature_l);
@@ -1218,7 +1267,11 @@ void rai::smart_contract_hashables::deserialize_json (bool & error_a, boost::pro
 				error_a = abi_length.decode_dec (abi_length_l);
 				if (!error_a)
 				{
-					abi = hex_string_to_stream (abi_l);
+					error_a = abi_hash.decode_hex (abi_hash_l);
+					if(!error_a)
+					{
+						abi = hex_string_to_stream (abi_l);
+					}
 				}
 			}
 		}

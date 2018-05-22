@@ -76,7 +76,9 @@ int main (int argc, char * const * argv)
 					          << "Account: " << rep.pub.to_account () << std::endl;
 				}
 				rai::uint128_t balance (std::numeric_limits<rai::uint128_t>::max ());
-				rai::open_block genesis_block (genesis.pub, genesis.pub, genesis.pub, genesis.prv, genesis.pub, work.generate (genesis.pub));
+				//rai::open_block genesis_block (genesis.pub, genesis.pub, genesis.pub, genesis.prv, genesis.pub, work.generate (genesis.pub));
+				rai::state_block genesis_block (genesis.pub,0, genesis.pub,balance, genesis.pub,rai::chain_token_type, genesis.prv, genesis.pub, work.generate (genesis.pub));
+
 				std::cout << genesis_block.to_json ();
 				rai::block_hash previous (genesis_block.hash ());
 				for (auto i (0); i != 8; ++i)
@@ -105,6 +107,39 @@ int main (int argc, char * const * argv)
 			std::cerr << "Bootstrapping requires one <key> option\n";
 			result = -1;
 		}
+	}
+	//QLINK:cli for smart contract block generate
+	else if (vm.count ("debug_sc_block_generate"))
+	{
+		if (vm.count ("sc_account_key") == 1)
+		{
+			rai::uint256_union sc_account_key;
+			
+			if (!sc_account_key.decode_hex (vm["sc_account_key"].as<std::string> ()))
+			{
+				rai::keypair sc_account (sc_account_key.to_string ());
+				rai::work_pool work (std::numeric_limits<unsigned>::max (), nullptr);
+			
+				if(vm.count ("sc_owner_account_key") == 1)
+				{
+					rai::uint256_union sc_owner_account_key;
+					if (!sc_owner_account_key.decode_hex (vm["sc_owner_account_key"].as<std::string> ()))
+					{				
+						rai::keypair sc_owner_account (sc_owner_account_key.to_string ());
+						if(vm.count ("abi") == 1)
+						{
+							std::vector<uint8_t> abi;
+							auto abi_1(vm["abi"].as<std::string> ());
+							abi = rai::hex_string_to_stream (abi_1);
+							rai::smart_contract_block smart_contract_block (sc_account.pub,sc_owner_account.pub,abi, sc_owner_account.prv, sc_owner_account.pub, work.generate (sc_owner_account.pub));
+							std::cout << smart_contract_block.to_json ();
+							std::cout<<"smart contract block hash :"<<smart_contract_block.hash().to_string();
+						}
+					}
+				}
+			}
+		}
+		
 	}
 	else if (vm.count ("debug_dump_representatives"))
 	{
