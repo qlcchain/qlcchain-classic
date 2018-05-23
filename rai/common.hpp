@@ -42,10 +42,7 @@ public:
 	void open_block (rai::open_block const &) override;
 	void change_block (rai::change_block const &) override;
 	void state_block (rai::state_block const &) override;
-
-	void smart_contract_block (rai::smart_contract_block const &) override
-	{
-	}
+	void smart_contract_block (rai::smart_contract_block const &) override;
 
 	MDB_txn * transaction;
 	rai::block_store & store;
@@ -155,7 +152,7 @@ class pending_info
 public:
 	pending_info ();
 	pending_info (MDB_val const &);
-	pending_info (rai::account const &, rai::amount const &);
+	pending_info (rai::account const &, rai::amount const &, rai::block_hash const &);
 	void serialize (rai::stream &) const;
 	bool deserialize (rai::stream &);
 	bool operator== (rai::pending_info const &) const;

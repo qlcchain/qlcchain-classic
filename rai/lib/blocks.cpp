@@ -1072,7 +1072,6 @@ void rai::state_block::serialize_json (std::string & string_a) const
 	auto name (rai::get_sc_info_name (hashables.token_hash));
 	if (!name.empty ())
 		tree.put ("Token_name", name);
-	tree.put ("token", hashables.token_hash.to_string ());
 	std::string signature_l;
 	signature.encode_hex (signature_l);
 	tree.put ("signature", signature_l);

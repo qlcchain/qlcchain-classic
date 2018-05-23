@@ -415,7 +415,7 @@ void rai::block_store::upgrade_v3_to_v4 (MDB_txn * transaction_a)
 	{
 		rai::block_hash hash (i->first.uint256 ());
 		rai::pending_info_v3 info (i->second);
-		items.push (std::make_pair (rai::pending_key (info.destination, hash), rai::pending_info (info.source, info.amount)));
+		items.push (std::make_pair (rai::pending_key (info.destination, hash), rai::pending_info (info.source, info.amount, rai::chain_token_type)));
 	}
 	mdb_drop (transaction_a, pending, 0);
 	while (!items.empty ())
@@ -569,9 +569,13 @@ void rai::block_store::representation_add (MDB_txn * transaction_a, rai::block_h
 {
 	auto source_block (block_get (transaction_a, source_a));
 	assert (source_block != nullptr);
-	auto source_rep (source_block->representative ());
-	auto source_previous (representation_get (transaction_a, source_rep));
-	representation_put (transaction_a, source_rep, source_previous + amount_a);
+	rai::state_block const * state_block (dynamic_cast<rai::state_block const *> (source_block.get ()));
+	if (state_block != nullptr && state_block->hashables.token_hash == rai::chain_token_type)
+	{
+		auto source_rep (source_block->representative ());
+		auto source_previous (representation_get (transaction_a, source_rep));
+		representation_put (transaction_a, source_rep, source_previous + amount_a);
+	}
 }
 
 MDB_dbi rai::block_store::block_database (rai::block_type type_a)
@@ -950,25 +954,31 @@ bool rai::block_store::accounts_get (MDB_txn * transaction_a, rai::account const
 	{
 		rai::bufferstream stream (reinterpret_cast<uint8_t const *> (value.data ()), value.size ());
 		const auto size (value.size () / sizeof (rai::block_hash));
-		assert (size > 0);
-		infos_a.clear ();
-		rai::block_hash token_account;
-		auto counter (0);
-		for (auto i = 0; i < size; ++i)
+		if (size > 0)
 		{
-			auto flag (rai::read (stream, token_account));
-			if (flag)
-				continue;
-
-			rai::account_info info;
-			flag = account_get (transaction_a, token_account, info);
-			if (!flag)
+			infos_a.clear ();
+			rai::block_hash token_account;
+			auto counter (0);
+			for (auto i = 0; i < size; ++i)
 			{
-				infos_a.push_back (info);
-				++counter;
+				auto flag (rai::read (stream, token_account));
+				if (flag)
+					continue;
+
+				rai::account_info info;
+				flag = account_get (transaction_a, token_account, info);
+				if (!flag)
+				{
+					infos_a.push_back (info);
+					++counter;
+				}
 			}
+			result = (counter != size);
 		}
-		result = (counter != size);
+		else
+		{
+			result = true;
+		}
 	}
 	return result;
 }
@@ -1119,10 +1129,16 @@ void rai::block_store::account_put (MDB_txn * transaction_a, rai::account const 
 {
 	std::vector<rai::account_info> infos;
 	accounts_get (transaction_a, info_a.account, infos);
-	// TODO: check if exist ??
-	infos.push_back (info_a);
-	auto flag (accounts_put (transaction_a, info_a.account, infos));
-	assert (flag);
+
+	auto it = std::find_if (infos.begin (), infos.end (), [&info_a](const rai::account_info & i) {
+		return info_a.token_type == i.token_type && info_a.open_block == i.open_block;
+	});
+	if (it == infos.end ())
+	{
+		infos.push_back (info_a);
+		auto flag (accounts_put (transaction_a, info_a.account, infos));
+		assert (flag);
+	}
 
 	auto status (mdb_put (transaction_a, token_accounts, rai::mdb_val (token_account_a), info_a.val (), 0));
 	assert (status == 0);
@@ -1161,10 +1177,7 @@ bool rai::block_store::pending_get (MDB_txn * transaction_a, rai::pending_key co
 		result = false;
 		assert (value.size () == sizeof (pending_a.source.bytes) + sizeof (pending_a.amount.bytes) + sizeof (pending_a.token_type.bytes));
 		rai::bufferstream stream (reinterpret_cast<uint8_t const *> (value.data ()), value.size ());
-		auto error1 (rai::read (stream, pending_a.source));
-		assert (!error1);
-		auto error2 (rai::read (stream, pending_a.amount));
-		assert (!error2);
+		pending_a.deserialize (stream);
 	}
 	return result;
 }

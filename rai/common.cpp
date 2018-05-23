@@ -327,7 +327,8 @@ size_t rai::block_counts::sum ()
 
 rai::pending_info::pending_info () :
 source (0),
-amount (0)
+amount (0),
+token_type (0)
 {
 }
 
@@ -338,9 +339,10 @@ rai::pending_info::pending_info (MDB_val const & val_a)
 	std::copy (reinterpret_cast<uint8_t const *> (val_a.mv_data), reinterpret_cast<uint8_t const *> (val_a.mv_data) + sizeof (*this), reinterpret_cast<uint8_t *> (this));
 }
 
-rai::pending_info::pending_info (rai::account const & source_a, rai::amount const & amount_a) :
+rai::pending_info::pending_info (rai::account const & source_a, rai::amount const & amount_a, rai::block_hash const & token_type_a) :
 source (source_a),
-amount (amount_a)
+amount (amount_a),
+token_type (token_type_a)
 {
 }
 
@@ -348,6 +350,7 @@ void rai::pending_info::serialize (rai::stream & stream_a) const
 {
 	rai::write (stream_a, source.bytes);
 	rai::write (stream_a, amount.bytes);
+	rai::write (stream_a, token_type.bytes);
 }
 
 bool rai::pending_info::deserialize (rai::stream & stream_a)
@@ -356,13 +359,17 @@ bool rai::pending_info::deserialize (rai::stream & stream_a)
 	if (!result)
 	{
 		result = rai::read (stream_a, amount.bytes);
+		if (!result)
+		{
+			result = rai::read (stream_a, token_type.bytes);
+		}
 	}
 	return result;
 }
 
 bool rai::pending_info::operator== (rai::pending_info const & other_a) const
 {
-	return source == other_a.source && amount == other_a.amount;
+	return source == other_a.source && amount == other_a.amount && token_type == other_a.token_type;
 }
 
 rai::mdb_val rai::pending_info::val () const
@@ -720,6 +727,12 @@ void rai::balance_visitor::state_block (rai::state_block const & block_a)
 {
 	balance = block_a.hashables.balance.number ();
 	current_balance = 0;
+}
+
+void rai::balance_visitor::smart_contract_block (rai::smart_contract_block const &)
+{
+	result = 0;
+	current = 0;
 }
 
 void rai::balance_visitor::compute (rai::block_hash const & block_hash)

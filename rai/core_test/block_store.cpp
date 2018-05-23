@@ -128,7 +128,7 @@ TEST (block_store, pending_iterator)
 	ASSERT_TRUE (!init);
 	rai::transaction transaction (store.environment, nullptr, true);
 	ASSERT_EQ (store.pending_end (), store.pending_begin (transaction));
-	store.pending_put (transaction, rai::pending_key (1, 2), { 2, 3 });
+	store.pending_put (transaction, rai::pending_key (1, 2), { 2, 3, rai::chain_token_type });
 	auto current (store.pending_begin (transaction));
 	ASSERT_NE (store.pending_end (), current);
 	rai::pending_key key1 (current->first);

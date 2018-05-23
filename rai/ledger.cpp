@@ -31,7 +31,7 @@ public:
 		assert (!error);
 		ledger.store.pending_del (transaction, key);
 		ledger.store.representation_add (transaction, ledger.representative (transaction, hash), pending.amount.number ());
-		ledger.change_latest (transaction, pending.source, block_a.hashables.previous, info.rep_block, ledger.balance (transaction, block_a.hashables.previous), info.block_count - 1);
+		ledger.change_latest (transaction, pending.source, rai::chain_token_type, block_a.hashables.previous, info.rep_block, ledger.balance (transaction, block_a.hashables.previous), info.block_count - 1);
 		ledger.store.block_del (transaction, hash);
 		ledger.store.frontier_del (transaction, hash);
 		ledger.store.frontier_put (transaction, block_a.hashables.previous, pending.source);
@@ -53,9 +53,9 @@ public:
 		auto error (ledger.store.account_get (transaction, destination_account, info));
 		assert (!error);
 		ledger.store.representation_add (transaction, ledger.representative (transaction, hash), 0 - amount);
-		ledger.change_latest (transaction, destination_account, block_a.hashables.previous, representative, ledger.balance (transaction, block_a.hashables.previous), info.block_count - 1);
+		ledger.change_latest (transaction, destination_account, rai::chain_token_type, block_a.hashables.previous, representative, ledger.balance (transaction, block_a.hashables.previous), info.block_count - 1);
 		ledger.store.block_del (transaction, hash);
-		ledger.store.pending_put (transaction, rai::pending_key (destination_account, block_a.hashables.source), { source_account, amount });
+		ledger.store.pending_put (transaction, rai::pending_key (destination_account, block_a.hashables.source), { source_account, amount, rai::chain_token_type });
 		ledger.store.frontier_del (transaction, hash);
 		ledger.store.frontier_put (transaction, block_a.hashables.previous, destination_account);
 		ledger.store.block_successor_clear (transaction, block_a.hashables.previous);
@@ -72,9 +72,9 @@ public:
 		auto destination_account (ledger.account (transaction, hash));
 		auto source_account (ledger.account (transaction, block_a.hashables.source));
 		ledger.store.representation_add (transaction, ledger.representative (transaction, hash), 0 - amount);
-		ledger.change_latest (transaction, destination_account, 0, 0, 0, 0);
+		ledger.change_latest (transaction, destination_account, rai::chain_token_type, 0, 0, 0, 0);
 		ledger.store.block_del (transaction, hash);
-		ledger.store.pending_put (transaction, rai::pending_key (destination_account, block_a.hashables.source), { source_account, amount });
+		ledger.store.pending_put (transaction, rai::pending_key (destination_account, block_a.hashables.source), { source_account, amount, rai::chain_token_type });
 		ledger.store.frontier_del (transaction, hash);
 		ledger.stats.inc (rai::stat::type::rollback, rai::stat::detail::open);
 	}
@@ -90,7 +90,7 @@ public:
 		ledger.store.representation_add (transaction, representative, balance);
 		ledger.store.representation_add (transaction, hash, 0 - balance);
 		ledger.store.block_del (transaction, hash);
-		ledger.change_latest (transaction, account, block_a.hashables.previous, representative, info.balance, info.block_count - 1);
+		ledger.change_latest (transaction, account, rai::chain_token_type, block_a.hashables.previous, representative, info.balance, info.block_count - 1);
 		ledger.store.frontier_del (transaction, hash);
 		ledger.store.frontier_put (transaction, block_a.hashables.previous, account);
 		ledger.store.block_successor_clear (transaction, block_a.hashables.previous);
@@ -130,7 +130,7 @@ public:
 		}
 		else if (!block_a.hashables.link.is_zero ())
 		{
-			rai::pending_info info (ledger.account (transaction, block_a.hashables.link), block_a.hashables.balance.number () - balance);
+			rai::pending_info info (ledger.account (transaction, block_a.hashables.link), block_a.hashables.balance.number () - balance, rai::chain_token_type);
 			ledger.store.pending_put (transaction, rai::pending_key (block_a.hashables.account, block_a.hashables.link), info);
 			ledger.stats.inc (rai::stat::type::rollback, rai::stat::detail::receive);
 		}
@@ -138,7 +138,7 @@ public:
 		rai::account_info info;
 		auto error (ledger.store.account_get (transaction, block_a.hashables.account, info));
 		assert (!error);
-		ledger.change_latest (transaction, block_a.hashables.account, block_a.hashables.previous, representative, balance, info.block_count - 1);
+		ledger.change_latest (transaction, block_a.hashables.account, rai::chain_token_type, block_a.hashables.previous, representative, balance, info.block_count - 1);
 
 		auto previous (ledger.store.block_get (transaction, block_a.hashables.previous));
 		if (previous != nullptr)
@@ -146,7 +146,7 @@ public:
 			ledger.store.block_successor_clear (transaction, block_a.hashables.previous);
 			if (previous->type () < rai::block_type::state)
 			{
-				ledger.store.frontier_put (transaction, block_a.hashables.previous, block_a.hashables.account);
+				ledger.store.frontier_put (transaction, block_a.hashables.previous, info.open_block);
 			}
 		}
 		else
@@ -191,8 +191,8 @@ void ledger_processor::state_block_impl (rai::state_block const & block_a)
 	auto hash (block_a.hash ());
 	// 检查引用的 smart contract token 是否存在
 	auto token_hash (block_a.hashables.token_hash);
-	auto token_exist = !token_hash.is_zero () && ledger.store.block_exists (transaction, token_hash);
-	auto existing (ledger.store.block_exists (transaction, hash) && token_exist);
+	auto const token_exist = !token_hash.is_zero () && ledger.store.block_exists (transaction, token_hash);
+	auto existing (ledger.store.block_exists (transaction, hash));
 	result.code = existing ? rai::process_result::old : rai::process_result::progress; // Have we seen this block before? (Unambiguous)
 	if (result.code == rai::process_result::progress)
 	{
@@ -290,7 +290,7 @@ void ledger_processor::state_block_impl (rai::state_block const & block_a)
 					if (is_send)
 					{
 						rai::pending_key key (block_a.hashables.link, hash);
-						rai::pending_info info (block_a.hashables.account, result.amount.number ());
+						rai::pending_info info (block_a.hashables.account, result.amount.number (), token_hash);
 						ledger.store.pending_put (transaction, key, info);
 						ledger.stats.inc (rai::stat::type::ledger, rai::stat::detail::send);
 					}
@@ -300,7 +300,7 @@ void ledger_processor::state_block_impl (rai::state_block const & block_a)
 						ledger.stats.inc (rai::stat::type::ledger, rai::stat::detail::receive);
 					}
 
-					ledger.change_latest (transaction, block_a.hashables.account, hash, hash, block_a.hashables.balance, info.block_count + 1, true);
+					ledger.change_latest (transaction, block_a.hashables.account, token_hash, hash, hash, block_a.hashables.balance, info.block_count + 1, true);
 					if (!ledger.store.frontier_get (transaction, info.head).is_zero ())
 					{
 						ledger.store.frontier_del (transaction, info.head);
@@ -373,7 +373,7 @@ void ledger_processor::change_block (rai::change_block const & block_a)
 						auto balance (ledger.balance (transaction, block_a.hashables.previous));
 						ledger.store.representation_add (transaction, hash, balance);
 						ledger.store.representation_add (transaction, info.rep_block, 0 - balance);
-						ledger.change_latest (transaction, account, hash, hash, info.balance, info.block_count + 1);
+						ledger.change_latest (transaction, account, rai::chain_token_type, hash, hash, info.balance, info.block_count + 1);
 						ledger.store.frontier_del (transaction, block_a.hashables.previous);
 						ledger.store.frontier_put (transaction, hash, account);
 						result.account = account;
@@ -417,8 +417,8 @@ void ledger_processor::send_block (rai::send_block const & block_a)
 							auto amount (info.balance.number () - block_a.hashables.balance.number ());
 							ledger.store.representation_add (transaction, info.rep_block, 0 - amount);
 							ledger.store.block_put (transaction, hash, block_a);
-							ledger.change_latest (transaction, account, hash, info.rep_block, block_a.hashables.balance, info.block_count + 1);
-							ledger.store.pending_put (transaction, rai::pending_key (block_a.hashables.destination, hash), { account, amount });
+							ledger.change_latest (transaction, account, rai::chain_token_type, hash, info.rep_block, block_a.hashables.balance, info.block_count + 1);
+							ledger.store.pending_put (transaction, rai::pending_key (block_a.hashables.destination, hash), { account, amount, rai::chain_token_type });
 							ledger.store.frontier_del (transaction, block_a.hashables.previous);
 							ledger.store.frontier_put (transaction, hash, account);
 							result.account = account;
@@ -473,7 +473,7 @@ void ledger_processor::receive_block (rai::receive_block const & block_a)
 									assert (!error);
 									ledger.store.pending_del (transaction, key);
 									ledger.store.block_put (transaction, hash, block_a);
-									ledger.change_latest (transaction, account, hash, info.rep_block, new_balance, info.block_count + 1);
+									ledger.change_latest (transaction, account, rai::chain_token_type, hash, info.rep_block, new_balance, info.block_count + 1);
 									ledger.store.representation_add (transaction, info.rep_block, pending.amount.number ());
 									ledger.store.frontier_del (transaction, block_a.hashables.previous);
 									ledger.store.frontier_put (transaction, hash, account);
@@ -525,7 +525,7 @@ void ledger_processor::open_block (rai::open_block const & block_a)
 							assert (!error);
 							ledger.store.pending_del (transaction, key);
 							ledger.store.block_put (transaction, hash, block_a);
-							ledger.change_latest (transaction, block_a.hashables.account, hash, hash, pending.amount.number (), info.block_count + 1);
+							ledger.change_latest (transaction, block_a.hashables.account, rai::chain_token_type, hash, hash, pending.amount.number (), info.block_count + 1);
 							ledger.store.representation_add (transaction, hash, pending.amount.number ());
 							ledger.store.frontier_put (transaction, hash, block_a.hashables.account);
 							result.account = block_a.hashables.account;
@@ -607,6 +607,7 @@ rai::uint128_t rai::ledger::balance (MDB_txn * transaction_a, rai::block_hash co
 }
 
 // Balance for an account by account number
+// FIXME:
 rai::uint128_t rai::ledger::account_balance (MDB_txn * transaction_a, rai::account const & account_a)
 {
 	rai::uint128_t result (0);
@@ -619,6 +620,7 @@ rai::uint128_t rai::ledger::account_balance (MDB_txn * transaction_a, rai::accou
 	return result;
 }
 
+// FIXME:
 rai::uint128_t rai::ledger::account_pending (MDB_txn * transaction_a, rai::account const & account_a)
 {
 	rai::uint128_t result (0);
@@ -777,7 +779,10 @@ rai::account rai::ledger::account (MDB_txn * transaction_a, rai::block_hash cons
 	if (block->type () == rai::block_type::state)
 	{
 		auto state_block (dynamic_cast<rai::state_block *> (block.get ()));
-		result = state_block->hashables.account;
+		//result = state_block->hashables.account;
+		rai::account_info info;
+		store.accounts_get (transaction_a, state_block->hashables.account, state_block->hashables.token_hash, info);
+		result = info.open_block;
 	}
 	else if (successor.is_zero ())
 	{
@@ -854,10 +859,10 @@ void rai::ledger::checksum_update (MDB_txn * transaction_a, rai::block_hash cons
 	store.checksum_put (transaction_a, 0, 0, value);
 }
 
-void rai::ledger::change_latest (MDB_txn * transaction_a, rai::account const & account_a, rai::block_hash const & hash_a, rai::block_hash const & rep_block_a, rai::amount const & balance_a, uint64_t block_count_a, bool is_state)
+void rai::ledger::change_latest (MDB_txn * transaction_a, rai::account const & account_a, rai::block_hash const & token_hash_a, rai::block_hash const & hash_a, rai::block_hash const & rep_block_a, rai::amount const & balance_a, uint64_t block_count_a, bool is_state)
 {
 	rai::account_info info;
-	auto exists (!store.account_get (transaction_a, account_a, info));
+	auto exists (!store.accounts_get (transaction_a, account_a, token_hash_a, info));
 	if (exists)
 	{
 		checksum_update (transaction_a, info.head);
@@ -874,7 +879,9 @@ void rai::ledger::change_latest (MDB_txn * transaction_a, rai::account const & a
 		info.balance = balance_a;
 		info.modified = rai::seconds_since_epoch ();
 		info.block_count = block_count_a;
-		store.account_put (transaction_a, account_a, info);
+		info.token_type = token_hash_a;
+		info.account = account_a;
+		store.account_put (transaction_a, info.open_block, info);
 		if (!(block_count_a % store.block_info_max) && !is_state)
 		{
 			rai::block_info block_info;
@@ -926,6 +933,32 @@ std::unique_ptr<rai::block> rai::ledger::forked_block (MDB_txn * transaction_a, 
 		assert (!error);
 		result = store.block_get (transaction_a, info.open_block);
 		assert (result != nullptr);
+	}
+	return result;
+}
+
+rai::uint128_t rai::ledger::accounts_balance (MDB_txn * transaction_a, rai::account const & account_a, rai::account const & token_type_a)
+{
+	rai::uint128_t result (0);
+	rai::account_info info;
+	auto none (store.accounts_get (transaction_a, account_a, token_type_a, info));
+	if (!none)
+	{
+		result = info.balance.number ();
+	}
+	return result;
+}
+
+rai::uint128_t rai::ledger::accounts_pending (MDB_txn * transaction_a, rai::account const & account_a, rai::account const & token_type_a)
+{
+	rai::uint128_t result (0);
+	rai::account_info info;
+	store.accounts_get (transaction_a, account_a, token_type_a, info);
+	rai::account end (info.open_block.number () + 1);
+	for (auto i (store.pending_begin (transaction_a, rai::pending_key (info.open_block, 0))), n (store.pending_begin (transaction_a, rai::pending_key (end, 0))); i != n; ++i)
+	{
+		rai::pending_info info (i->second);
+		result += info.amount.number ();
 	}
 	return result;
 }

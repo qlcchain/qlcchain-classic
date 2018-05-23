@@ -1482,17 +1482,17 @@ rai::process_return rai::block_processor::process_receive_one (MDB_txn * transac
 				BOOST_LOG (node.log) << boost::str (boost::format ("Gap smart contract for: %1%") % hash.to_string ());
 			}
 			// FIXME: 调用 bootstrap 同步 smart contract block
-			auto sc_block (dynamic_cast<rai::state_block*> (block_a.get ()));
-			std::shared_ptr<rai::state_block> sc_block_1(sc_block);
-			auto hash_sc(sc_block_1->hashables.token_hash);//QLINK:smart contract block hash
+			auto sc_block (dynamic_cast<rai::state_block *> (block_a.get ()));
+			std::shared_ptr<rai::state_block> sc_block_1 (sc_block);
+			auto hash_sc (sc_block_1->hashables.token_hash); //QLINK:smart contract block hash
 			node.store.unchecked_put (transaction_a, hash_sc, block_a);
 			node.gap_cache.add (transaction_a, block_a);
 			std::unique_lock<std::mutex> lock (mutex);
-			auto request_smart_contract_block(true);
+			auto request_smart_contract_block (true);
 			while (request_smart_contract_block)
 			{
 				node.bootstrap_initiator.attempt->smart_contract_hash = hash_sc;
-				request_smart_contract_block = node.bootstrap_initiator.attempt->request_smart_contract(lock);
+				request_smart_contract_block = node.bootstrap_initiator.attempt->request_smart_contract (lock);
 			}
 			queue_unchecked (transaction_a, hash_sc);
 			break;
@@ -3510,6 +3510,10 @@ rai::thread_runner::thread_runner (boost::asio::io_service & service_a, unsigned
 			{
 				service_a.run ();
 			}
+			catch (std::exception const & e)
+			{
+				std::cout << "Unhandled service exception: " << e.what () << std::endl;
+			}
 			catch (...)
 			{
 				assert (false && "Unhandled service exception");
@@ -4397,5 +4401,3 @@ void rai::port_mapping::stop ()
 	freeUPNPDevlist (devices);
 	devices = nullptr;
 }
-
-

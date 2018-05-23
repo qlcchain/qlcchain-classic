@@ -303,8 +303,11 @@ public:
 	QLineEdit * sc_account_line;
 	QLabel * sc_account_owner_label;
 	QLineEdit * sc_account_owner_line;
+	QHBoxLayout * abi_layout;
 	QLabel * abi_path_label;
+	QWidget * abi_window;
 	QLineEdit * abi_path_line;
+	QPushButton * abi_choose_file;
 	QPushButton * publish;
 	QPushButton * publish_back;
 	rai_qt::wallet & wallet;

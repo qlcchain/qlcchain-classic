@@ -776,7 +776,7 @@ bool rai::bootstrap_attempt::push_smart_contract (std::unique_lock<std::mutex> &
 		std::future<bool> future;
 		{
 			auto client (std::make_shared<rai::smart_contract_client> (connection_l));
-			rai::transaction transaction (connection_l->node->store.environment, nullptr, true);
+			rai::transaction transaction (connection_l->node->store.environment, nullptr, false);
 			client->push (transaction);
 			smart_contract_client = client;
 			future = client->promise.get_future ();

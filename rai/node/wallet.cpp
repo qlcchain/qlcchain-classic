@@ -883,7 +883,7 @@ std::shared_ptr<rai::block> rai::wallet::receive_action (rai::block const & send
 						{
 							if (node.ledger.state_block_generation_enabled (transaction))
 							{
-								block.reset (new rai::state_block (account, 0, representative_a, pending_info.amount, hash, info.token_type, prv, account, cached_work));
+								block.reset (new rai::state_block (account, 0, representative_a, pending_info.amount, hash, state_block->hashables.token_hash, prv, account, cached_work));
 							}
 							else
 							{
@@ -1011,7 +1011,7 @@ std::shared_ptr<rai::block> rai::wallet::send_action (rai::account const & sourc
 				auto existing (store.find (transaction, source_a));
 				if (existing != store.end ())
 				{
-					auto balance (node.ledger.account_balance (transaction, source_a));
+					auto balance (node.ledger.accounts_balance (transaction, source_a, token_hash_a));
 					if (!balance.is_zero () && balance >= amount_a)
 					{
 						rai::account_info info;
