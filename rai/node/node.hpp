@@ -391,6 +391,7 @@ public:
 	bool insufficient_work_logging () const;
 	bool log_rpc () const;
 	bool bulk_pull_logging () const;
+	bool smart_contract_logging() const;
 	bool callback_logging () const;
 	bool work_generation_time () const;
 	bool log_to_cerr () const;
@@ -408,6 +409,7 @@ public:
 	bool insufficient_work_logging_value;
 	bool log_rpc_value;
 	bool bulk_pull_logging_value;
+	bool smart_contract_logging_value;
 	bool work_generation_time_value;
 	bool log_to_cerr_value;
 	bool flush;
@@ -505,9 +507,9 @@ public:
 	bool have_blocks ();
 	void process_blocks ();
 	rai::process_return process_receive_one (MDB_txn *, std::shared_ptr<rai::block>);
-
+	void queue_unchecked(MDB_txn *, rai::block_hash const &);
 private:
-	void queue_unchecked (MDB_txn *, rai::block_hash const &);
+	//void queue_unchecked (MDB_txn *, rai::block_hash const &);
 	void process_receive_many (std::unique_lock<std::mutex> &);
 	bool stopped;
 	bool active;
@@ -592,6 +594,9 @@ public:
 	static std::chrono::minutes constexpr backup_interval = std::chrono::minutes (5);
 	//QLINK
 	std::deque<std::shared_ptr<rai::smart_contract_block>> sc_blocks;
+	std::deque<rai::block_hash> smart_contract_hashs;
+	std::mutex mutex_sc_blocks;
+	std::mutex mutex_smart_contract_hashs;
 };
 class thread_runner
 {

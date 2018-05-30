@@ -72,6 +72,7 @@ public:
 	std::shared_ptr<rai::bootstrap_client> connection (std::unique_lock<std::mutex> &);
 	bool consume_future (std::future<bool> &);
 	void populate_connections ();
+	void handle_smart_block ();
 	bool request_frontier (std::unique_lock<std::mutex> &);
 	void request_pull (std::unique_lock<std::mutex> &);
 	void request_push (std::unique_lock<std::mutex> &);
@@ -85,23 +86,18 @@ public:
 	bool should_log ();
 	void add_bulk_push_target (rai::block_hash const &, rai::block_hash const &);
 	//QLINK:查询指定的智能合约
-	bool request_smart_contract (std::unique_lock<std::mutex> &);
-	//QLINK:推送本地智能合约
-	bool push_smart_contract (std::unique_lock<std::mutex> &);
+	void request_smart_contract(std::unique_lock<std::mutex> &);
 	//QLINK:把需要广播的智能合约快push给连接的节点
-	bool push_sc_block_to_peers (std::unique_lock<std::mutex> &);
+	void push_sc_block_to_peers (std::unique_lock<std::mutex> &);
 	std::chrono::steady_clock::time_point next_log;
 	std::deque<std::weak_ptr<rai::bootstrap_client>> clients;
 	std::weak_ptr<rai::bootstrap_client> connection_frontier_request;
 	std::weak_ptr<rai::frontier_req_client> frontiers;
 	std::weak_ptr<rai::bulk_push_client> push;
-	std::weak_ptr<rai::smart_contract_client> smart_contract_client;
-	//std::deque<rai::block_hash> smart_contract_hashs;
 	//QLINK:查询智能合约接口的hash
-	//std::deque<rai::block_hash> smart_contract_hashs;
 	rai::block_hash smart_contract_hash;
-	//QLINK:推送智能合约接口的hash
-	rai::block_hash smart_contract_hash_push;
+	//QLINK
+	std::shared_ptr<rai::smart_contract_block> sc_block_need_push;
 	std::deque<rai::pull_info> pulls;
 	std::deque<std::shared_ptr<rai::bootstrap_client>> idle;
 	std::atomic<unsigned> connections;
@@ -191,17 +187,16 @@ public:
 	~bootstrap_initiator ();
 	void bootstrap (rai::endpoint const &, bool add_to_peers = true);
 	void bootstrap ();
-	void run_bootstrap ();
+	void run_bootstrap();
 	void notify_listeners (bool);
 	void add_observer (std::function<void(bool)> const &);
 	bool in_progress ();
 	std::shared_ptr<rai::bootstrap_attempt> current_attempt ();
 	void stop ();
-	std::shared_ptr<rai::bootstrap_attempt> attempt;
 
 private:
 	rai::node & node;
-	//std::shared_ptr<rai::bootstrap_attempt> attempt;
+	std::shared_ptr<rai::bootstrap_attempt> attempt;
 	bool stopped;
 	std::mutex mutex;
 	std::condition_variable condition;
@@ -342,7 +337,8 @@ public:
 
 private:
 	void received_block (boost::system::error_code const &, size_t);
-	std::array<uint8_t, 256> receive_buffer;
+	std::vector<uint8_t> sc_msg_transfer;
+	std::vector<uint8_t> sc_msg;
 	std::shared_ptr<rai::bootstrap_server> connection;
 };
 //QLINK
@@ -364,15 +360,13 @@ public:
 	/**
 	 * 发送本地智能合约到连接的节点
 	 */
-	void push ();
-	void push (MDB_txn *);
-	void push_block (std::shared_ptr<rai::smart_contract_block> const &);
+	void push_block(std::shared_ptr<rai::smart_contract_block> const &);
 	//QLINK:push完之后等待接收对方节点回的ack
-	void receive_smart_contract_ack ();
-	void receive_smart_contract_ack (boost::system::error_code const &, size_t);
-	std::promise<bool> promise;
-
+	void receive_smart_contract_ack();
+	void receive_smart_contract_ack(boost::system::error_code const &, size_t);
 private:
 	std::shared_ptr<rai::bootstrap_client> connection;
+	std::vector<uint8_t> sc_msg_transfer;
+	std::vector<uint8_t> sc_msg;
 };
 }

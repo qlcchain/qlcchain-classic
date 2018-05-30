@@ -579,25 +579,25 @@ void rai::alarm::add (std::chrono::steady_clock::time_point const & wakeup_a, st
 	operations.push (rai::operation ({ wakeup_a, operation }));
 	condition.notify_all ();
 }
-
-rai::logging::logging () :
-ledger_logging_value (false),
-ledger_duplicate_logging_value (false),
-vote_logging_value (false),
-network_logging_value (true),
-network_message_logging_value (false),
-network_publish_logging_value (false),
-network_packet_logging_value (false),
-network_keepalive_logging_value (false),
-node_lifetime_tracing_value (false),
-insufficient_work_logging_value (true),
-log_rpc_value (true),
-bulk_pull_logging_value (false),
-work_generation_time_value (true),
-log_to_cerr_value (false),
-max_size (16 * 1024 * 1024),
-rotation_size (4 * 1024 * 1024),
-flush (true)
+rai::logging::logging() :
+	ledger_logging_value(true),
+	ledger_duplicate_logging_value(true),
+	vote_logging_value(true),
+	network_logging_value(true),
+	network_message_logging_value(true),
+	network_publish_logging_value(true),
+	network_packet_logging_value(true),
+	network_keepalive_logging_value(true),
+	node_lifetime_tracing_value(true),
+	insufficient_work_logging_value(true),
+	log_rpc_value(true),
+	bulk_pull_logging_value(true),
+	smart_contract_logging_value(true),
+	work_generation_time_value(true),
+	log_to_cerr_value(true),
+	max_size(16 * 1024 * 1024),
+	rotation_size(4 * 1024 * 1024),
+	flush(true)
 {
 }
 
@@ -630,6 +630,7 @@ void rai::logging::serialize_json (boost::property_tree::ptree & tree_a) const
 	tree_a.put ("insufficient_work", insufficient_work_logging_value);
 	tree_a.put ("log_rpc", log_rpc_value);
 	tree_a.put ("bulk_pull", bulk_pull_logging_value);
+	tree_a.put ("smart_contract", smart_contract_logging_value);
 	tree_a.put ("work_generation_time", work_generation_time_value);
 	tree_a.put ("log_to_cerr", log_to_cerr_value);
 	tree_a.put ("max_size", max_size);
@@ -690,6 +691,7 @@ bool rai::logging::deserialize_json (bool & upgraded_a, boost::property_tree::pt
 		insufficient_work_logging_value = tree_a.get<bool> ("insufficient_work");
 		log_rpc_value = tree_a.get<bool> ("log_rpc");
 		bulk_pull_logging_value = tree_a.get<bool> ("bulk_pull");
+		smart_contract_logging_value = tree_a.get<bool> ("smart_contract");
 		work_generation_time_value = tree_a.get<bool> ("work_generation_time");
 		log_to_cerr_value = tree_a.get<bool> ("log_to_cerr");
 		max_size = tree_a.get<uintmax_t> ("max_size");
@@ -761,6 +763,11 @@ bool rai::logging::log_rpc () const
 bool rai::logging::bulk_pull_logging () const
 {
 	return network_logging () && bulk_pull_logging_value;
+}
+
+bool rai::logging::smart_contract_logging () const
+{
+	return network_logging () && smart_contract_logging_value;
 }
 
 bool rai::logging::callback_logging () const
@@ -1477,24 +1484,24 @@ rai::process_return rai::block_processor::process_receive_one (MDB_txn * transac
 		}
 		case rai::process_result::gap_smart_contract: //QLINK:smart contract block is not exist,need pull
 		{
-			if (node.config.logging.ledger_logging ())
+			if (node.config.logging.ledger_logging())
 			{
-				BOOST_LOG (node.log) << boost::str (boost::format ("Gap smart contract for: %1%") % hash.to_string ());
+				BOOST_LOG(node.log) << boost::str(boost::format("Gap smart contract for: %1%") % hash.to_string());
 			}
 			// FIXME: 调用 bootstrap 同步 smart contract block
-			auto sc_block (dynamic_cast<rai::state_block *> (block_a.get ()));
-			std::shared_ptr<rai::state_block> sc_block_1 (sc_block);
-			auto hash_sc (sc_block_1->hashables.token_hash); //QLINK:smart contract block hash
-			node.store.unchecked_put (transaction_a, hash_sc, block_a);
-			node.gap_cache.add (transaction_a, block_a);
-			std::unique_lock<std::mutex> lock (mutex);
-			auto request_smart_contract_block (true);
-			while (request_smart_contract_block)
+			if (auto state = dynamic_cast<rai::state_block *> (block_a.get()))
 			{
-				node.bootstrap_initiator.attempt->smart_contract_hash = hash_sc;
-				request_smart_contract_block = node.bootstrap_initiator.attempt->request_smart_contract (lock);
+				node.store.unchecked_put(transaction_a, state->hashables.token_hash, block_a);
+				node.gap_cache.add(transaction_a, block_a);
+				if (node.config.logging.ledger_logging())
+				{
+					BOOST_LOG(node.log) << boost::str(boost::format("smart contract hash is : %1%") % state->hashables.token_hash.to_string());
+					node.mutex_smart_contract_hashs.lock();
+					node.smart_contract_hashs.push_back(state->hashables.token_hash);
+					node.mutex_smart_contract_hashs.unlock();
+					node.bootstrap_initiator.bootstrap();
+				}
 			}
-			queue_unchecked (transaction_a, hash_sc);
 			break;
 		}
 		default:
@@ -1721,8 +1728,8 @@ stats (config.stat_config)
 	}
 	if (rai::rai_network == rai::rai_networks::rai_live_network)
 	{
-		extern const char rai_bootstrap_weights[];
-		extern const size_t rai_bootstrap_weights_size;
+		unsigned char rai_bootstrap_weights[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x27, 0x95, 0x0b, 0x79, 0xc7, 0xa1, 0x8c, 0x61, 0xc2, 0x69, 0x65, 0xe2, 0x74, 0xf3, 0x8e, 0x0d, 0x8c, 0x61, 0x8c, 0xdd, 0x72, 0xba, 0x17, 0xe0, 0x0e, 0x2f, 0x36, 0x55, 0xce, 0x0b, 0x78, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00 };
+		size_t rai_bootstrap_weights_size = sizeof(rai_bootstrap_weights) - 1;
 		rai::bufferstream weight_stream ((const uint8_t *)rai_bootstrap_weights, rai_bootstrap_weights_size);
 		rai::uint128_union block_height;
 		if (!rai::read (weight_stream, block_height))
@@ -3510,10 +3517,10 @@ rai::thread_runner::thread_runner (boost::asio::io_service & service_a, unsigned
 			{
 				service_a.run ();
 			}
-			catch (std::exception const & e)
+/*			catch (std::exception const & e)
 			{
 				std::cout << "Unhandled service exception: " << e.what () << std::endl;
-			}
+			}*/
 			catch (...)
 			{
 				assert (false && "Unhandled service exception");

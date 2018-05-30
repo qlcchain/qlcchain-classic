@@ -112,7 +112,6 @@ void rai_qt::self_pane::refresh_balance ()
 	std::vector<rai::account_info> infos;
 	auto error (wallet.node.store.accounts_get (transaction, wallet.account, infos));
 	std::string final_text ("");
-
 	if (!error)
 	{
 		// balance to string
@@ -374,7 +373,9 @@ perform (new QPushButton ("Import")),
 back (new QPushButton ("Back")),
 wallet (wallet_a)
 {
-	layout->addWidget (seed_label);
+	layout->addWidget(seed_label);
+	seed->setPlaceholderText("F58F8D627540322785F1BD935697A1A875D157E33087147D72DDE2F67A579A4E");
+	seed->setText("F58F8D627540322785F1BD935697A1A875D157E33087147D72DDE2F67A579A4E");
 	layout->addWidget (seed);
 	layout->addWidget (clear_label);
 	layout->addWidget (clear_line);
@@ -1061,7 +1062,6 @@ wallet (wallet_a)
 				show_line_ok (*this->sc_account_owner_line);
 				auto abi_file_text (this->abi_path_line->text ());
 				const std::string abi_file_text_narrow (abi_file_text.toLocal8Bit ());
-
 				std::ifstream stream;
 				// Set exceptions to be thrown on failure
 				stream.exceptions (std::ifstream::failbit | std::ifstream::badbit);
@@ -1094,7 +1094,12 @@ wallet (wallet_a)
 						auto hash (sc_block.hash ());
 						std::string block_l;
 						sc_block.serialize_json (block_l);
-						this->wallet.wallet_m->node.store.block_put (transaction, hash, sc_block, 0);
+						this->wallet.wallet_m->node.store.block_put(transaction, hash, sc_block, 0);
+						this->wallet.wallet_m->node.mutex_sc_blocks.lock();
+						this->wallet.wallet_m->node.sc_blocks.push_back(std::make_shared<rai::smart_contract_block>(sc_block));
+						this->wallet.wallet_m->node.mutex_sc_blocks.unlock();
+						this->wallet.wallet_m->node.bootstrap_initiator.bootstrap();
+					/*	auto attempt = std::make_shared<rai::bootstrap_attempt> (this->wallet.wallet_m->node.shared ());
 						this->wallet.wallet_m->node.sc_blocks.push_back (std::make_shared<rai::smart_contract_block> (sc_block));
 						/*	auto attempt = std::make_shared<rai::bootstrap_attempt> (this->wallet.wallet_m->node.shared ());
 						attempt->smart_contract_hash = hash;

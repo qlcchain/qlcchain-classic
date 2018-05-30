@@ -902,26 +902,24 @@ void rai::vote::serialize (rai::stream & stream_a)
 	write (stream_a, sequence);
 	rai::serialize_block (stream_a, *block);
 }
-
-bool rai::vote::deserialize (rai::stream & stream_a)
+bool rai::vote::deserialize(rai::stream & stream_a)
 {
-	auto result (read (stream_a, account));
+	auto result(read(stream_a, account));
 	if (!result)
 	{
-		result = read (stream_a, signature);
+		result = read(stream_a, signature);
 		if (!result)
 		{
-			result = read (stream_a, sequence);
+			result = read(stream_a, sequence);
 			if (!result)
 			{
-				block = rai::deserialize_block (stream_a, block_type ());
+				block = rai::deserialize_block(stream_a, block_type());
 				result = block == nullptr;
 			}
 		}
 	}
 	return result;
 }
-
 bool rai::vote::validate ()
 {
 	auto result (rai::validate_message (account, hash (), signature));
@@ -964,16 +962,16 @@ rai::genesis_sc_block::genesis_sc_block ()
 	sc_block.reset (static_cast<rai::smart_contract_block *> (block.release ()));
 }
 
-void rai::genesis_sc_block::initialize (MDB_txn * transaction_a, rai::block_store & store_a) const
+void rai::genesis_sc_block::initialize(MDB_txn * transaction_a, rai::block_store & store_a) const
 {
-	auto hash_l (hash ());
+	auto hash_l(hash());
 	//	std::cout<<hash_l.to_string()<<std::endl;
 	//	std::cout<<sc_block->to_json ();
 	//assert (store_a.latest_begin (transaction_a) == store_a.latest_end ());
-	store_a.block_put (transaction_a, hash_l, *sc_block);
+//	store_a.block_put(transaction_a, hash_l, *sc_block);
 }
 
-rai::block_hash rai::genesis_sc_block::hash () const
+rai::block_hash rai::genesis_sc_block::hash() const
 {
-	return sc_block->hash ();
+	return sc_block->hash();
 }

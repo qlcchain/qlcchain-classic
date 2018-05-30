@@ -533,9 +533,7 @@ bool rai::smart_contract_msg::deserialize (rai::stream & stream_a)
 		{
 			//QLINK
 			auto block (rai::deserialize_block (stream_a, block_type ()));
-			auto sc_block (dynamic_cast<rai::smart_contract_block *> (block.get ()));
-			std::shared_ptr<rai::smart_contract_block> sc_block_1 (sc_block);
-			smart_contract = sc_block_1;
+			smart_contract.reset (static_cast<rai::smart_contract_block *> (block.release ()));
 			result = smart_contract == nullptr;
 		}
 	}
