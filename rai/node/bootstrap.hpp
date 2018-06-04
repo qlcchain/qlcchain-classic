@@ -86,7 +86,7 @@ public:
 	bool should_log ();
 	void add_bulk_push_target (rai::block_hash const &, rai::block_hash const &);
 	//QLINK:查询指定的智能合约
-	void request_smart_contract(std::unique_lock<std::mutex> &);
+	void request_smart_contract (std::unique_lock<std::mutex> &);
 	//QLINK:把需要广播的智能合约快push给连接的节点
 	void push_sc_block_to_peers (std::unique_lock<std::mutex> &);
 	std::chrono::steady_clock::time_point next_log;
@@ -187,7 +187,7 @@ public:
 	~bootstrap_initiator ();
 	void bootstrap (rai::endpoint const &, bool add_to_peers = true);
 	void bootstrap ();
-	void run_bootstrap();
+	void run_bootstrap ();
 	void notify_listeners (bool);
 	void add_observer (std::function<void(bool)> const &);
 	bool in_progress ();
@@ -360,10 +360,11 @@ public:
 	/**
 	 * 发送本地智能合约到连接的节点
 	 */
-	void push_block(std::shared_ptr<rai::smart_contract_block> const &);
+	void push_block (std::shared_ptr<rai::smart_contract_block> const &);
 	//QLINK:push完之后等待接收对方节点回的ack
-	void receive_smart_contract_ack();
-	void receive_smart_contract_ack(boost::system::error_code const &, size_t);
+	void receive_smart_contract_ack ();
+	void receive_smart_contract_ack (boost::system::error_code const &, size_t);
+
 private:
 	std::shared_ptr<rai::bootstrap_client> connection;
 	std::vector<uint8_t> sc_msg_transfer;

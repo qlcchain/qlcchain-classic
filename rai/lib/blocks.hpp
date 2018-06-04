@@ -15,7 +15,6 @@ bool from_string_hex (std::string const &, uint64_t &);
 std::string stream_to_string_hex (std::vector<uint8_t> const &);
 std::vector<uint8_t> hex_string_to_stream (std::string const &);
 std::list<std::string> get_sc_info (rai::block_hash const &);
-bool put_sc_info ();
 std::string get_sc_info_name (rai::block_hash const &);
 
 // We operate on streams of uint8_t by convention
@@ -35,6 +34,14 @@ void write (rai::stream & stream_a, T const & value)
 	auto amount_written (stream_a.sputn (reinterpret_cast<uint8_t const *> (&value), sizeof (value)));
 	assert (amount_written == sizeof (value));
 }
+
+enum smart_contract_field
+{
+	name,
+	scale,
+	precision,
+	unit
+};
 class block_visitor;
 enum class block_type : uint8_t
 {
@@ -336,7 +343,6 @@ public:
 /**
  * 智能合约 block
  */
-//AUTHOR: goreng
 class smart_contract_block : public rai::block
 {
 public:

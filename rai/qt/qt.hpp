@@ -322,7 +322,7 @@ public:
 	void update_connected ();
 	void empty_password ();
 	void change_rendering_ratio (rai::uint128_t const &);
-	std::string format_balance (rai::uint128_t const &) const;
+	std::string format_balance (rai::uint128_t const &, rai::block_hash const &) const;
 	rai::uint128_t rendering_ratio;
 	rai::node & node;
 	std::shared_ptr<rai::wallet> wallet_m;
@@ -364,7 +364,7 @@ public:
 	QLabel * send_count_label;
 	QLineEdit * send_count;
 	QLabel * send_token_label;
-	QLineEdit * send_token_type;
+	QComboBox * send_token_type;
 	QPushButton * send_blocks_send;
 	QPushButton * send_blocks_back;
 	QPushButton * smart_contract_button;

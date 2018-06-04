@@ -118,10 +118,10 @@ void rai_qt::self_pane::refresh_balance ()
 		for (auto & info : infos)
 		{
 			auto balance (wallet.node.balance_pending (info.open_block));
-			final_text += get_sc_info_name (info.token_type) + " -> Balance: " + wallet.format_balance (balance.first);
+			final_text += get_sc_info_name (info.token_type) + " -> Balance: " + wallet.format_balance (balance.first, info.token_type);
 			if (!balance.second.is_zero ())
 			{
-				final_text += " Pending: " + wallet.format_balance (balance.second);
+				final_text += " Pending: " + wallet.format_balance (balance.second, info.token_type);
 			}
 			final_text += "\n";
 		}
@@ -295,11 +295,11 @@ void rai_qt::accounts::refresh_wallet_balance ()
 	QString final_text ("");
 	for (const auto & b : balances)
 	{
-		final_text = QString ("Total(%1): [Balance] -> %2").arg (QString (rai::get_sc_info_name (b.first).c_str ()), QString (wallet.format_balance (b.second.first).c_str ()));
+		final_text = QString ("Total(%1): [Balance] -> %2").arg (QString (rai::get_sc_info_name (b.first).c_str ()), QString (wallet.format_balance (b.second.first, b.first).c_str ()));
 		auto p (b.second.second);
 		if (!p.is_zero ())
 		{
-			final_text += QString ("; [Pending] -> %1").arg (QString (wallet.format_balance (p).c_str ()));
+			final_text += QString ("; [Pending] -> %1").arg (QString (wallet.format_balance (p, b.first).c_str ()));
 		}
 	}
 	wallet_balance_label->setText (final_text);
@@ -319,11 +319,10 @@ void rai_qt::accounts::refresh ()
 	for (auto i (wallet.wallet_m->store.begin (transaction)), j (wallet.wallet_m->store.end ()); i != j; ++i)
 	{
 		rai::public_key key (i->first.uint256 ());
-
-		for (auto & entry : rai::map_sc_info)
+		for (auto entry = rai::map_sc_info.begin (); entry != rai::map_sc_info.end (); ++entry)
 		{
 			rai::account_info info;
-			wallet.node.store.accounts_get (transaction, key, entry.first, info);
+			wallet.node.store.accounts_get (transaction, key, entry->first, info);
 			auto balance_amount (wallet.node.ledger.account_balance (transaction, info.open_block));
 			bool display (true);
 			switch (wallet.wallet_m->store.key_type (i->second))
@@ -343,7 +342,7 @@ void rai_qt::accounts::refresh ()
 			if (display)
 			{
 				QList<QStandardItem *> items;
-				std::string balance = wallet.format_balance (balance_amount);
+				std::string balance = wallet.format_balance (balance_amount, entry->first);
 				items.push_back (new QStandardItem (balance.c_str ()));
 				auto account (new QStandardItem (QString (key.to_account ().c_str ())));
 				account->setForeground (brush);
@@ -373,9 +372,9 @@ perform (new QPushButton ("Import")),
 back (new QPushButton ("Back")),
 wallet (wallet_a)
 {
-	layout->addWidget(seed_label);
-	seed->setPlaceholderText("F58F8D627540322785F1BD935697A1A875D157E33087147D72DDE2F67A579A4E");
-	seed->setText("F58F8D627540322785F1BD935697A1A875D157E33087147D72DDE2F67A579A4E");
+	layout->addWidget (seed_label);
+	seed->setPlaceholderText ("F58F8D627540322785F1BD935697A1A875D157E33087147D72DDE2F67A579A4E");
+	seed->setText ("F58F8D627540322785F1BD935697A1A875D157E33087147D72DDE2F67A579A4E");
 	layout->addWidget (seed);
 	layout->addWidget (clear_label);
 	layout->addWidget (clear_line);
@@ -639,7 +638,7 @@ void rai_qt::history::refresh ()
 			block->visit (visitor);
 			items.push_back (new QStandardItem (QString (visitor.type.c_str ())));
 			items.push_back (new QStandardItem (QString (visitor.account.to_account ().c_str ())));
-			auto balanceItem = new QStandardItem (QString (wallet.format_balance (visitor.amount).c_str ()));
+			auto balanceItem = new QStandardItem (QString (wallet.format_balance (visitor.amount, info.token_type).c_str ()));
 			balanceItem->setData (Qt::AlignRight, Qt::TextAlignmentRole);
 			items.push_back (balanceItem);
 			items.push_back (new QStandardItem (QString (hash.to_string ().c_str ())));
@@ -781,11 +780,19 @@ wallet (wallet_a)
 		{
 			show_line_ok (*account_line);
 			this->history.refresh ();
-			auto balance (this->wallet.node.balance_pending (account));
-			auto final_text (std::string ("Balance (XRB): ") + wallet.format_balance (balance.first));
-			if (!balance.second.is_zero ())
+			std::vector<rai::account_info> infos;
+			rai::transaction transaction (this->wallet.node.store.environment, nullptr, false);
+			this->wallet.node.store.accounts_get (transaction, account, infos);
+			std::string final_text ("");
+			for (const auto & info : infos)
 			{
-				final_text += "\nPending: " + wallet.format_balance (balance.second);
+				// FIXME: fix UI text
+				auto balance (this->wallet.node.balance_pending (info.open_block));
+				final_text += (std::string ("Balance : ") + wallet.format_balance (balance.first, info.token_type));
+				if (!balance.second.is_zero ())
+				{
+					final_text += "\nPending: " + wallet.format_balance (balance.second, info.token_type);
+				}
 			}
 			balance_label->setText (QString (final_text.c_str ()));
 		}
@@ -1094,12 +1101,12 @@ wallet (wallet_a)
 						auto hash (sc_block.hash ());
 						std::string block_l;
 						sc_block.serialize_json (block_l);
-						this->wallet.wallet_m->node.store.block_put(transaction, hash, sc_block, 0);
-						this->wallet.wallet_m->node.mutex_sc_blocks.lock();
-						this->wallet.wallet_m->node.sc_blocks.push_back(std::make_shared<rai::smart_contract_block>(sc_block));
-						this->wallet.wallet_m->node.mutex_sc_blocks.unlock();
-						this->wallet.wallet_m->node.bootstrap_initiator.bootstrap();
-					/*	auto attempt = std::make_shared<rai::bootstrap_attempt> (this->wallet.wallet_m->node.shared ());
+						this->wallet.wallet_m->node.store.block_put (transaction, hash, sc_block, 0);
+						this->wallet.wallet_m->node.mutex_sc_blocks.lock ();
+						this->wallet.wallet_m->node.sc_blocks.push_back (std::make_shared<rai::smart_contract_block> (sc_block));
+						this->wallet.wallet_m->node.mutex_sc_blocks.unlock ();
+						this->wallet.wallet_m->node.bootstrap_initiator.bootstrap ();
+						/*	auto attempt = std::make_shared<rai::bootstrap_attempt> (this->wallet.wallet_m->node.shared ());
 						this->wallet.wallet_m->node.sc_blocks.push_back (std::make_shared<rai::smart_contract_block> (sc_block));
 						/*	auto attempt = std::make_shared<rai::bootstrap_attempt> (this->wallet.wallet_m->node.shared ());
 						attempt->smart_contract_hash = hash;
@@ -1186,7 +1193,7 @@ send_account (new QLineEdit),
 send_count_label (new QLabel ("Amount:")),
 send_count (new QLineEdit),
 send_token_label (new QLabel ("Token Type:")),
-send_token_type (new QLineEdit),
+send_token_type (new QComboBox),
 send_blocks_send (new QPushButton ("Send")),
 send_blocks_back (new QPushButton ("Back")),
 active_status (*this),
@@ -1203,10 +1210,18 @@ smart_contract_button (new QPushButton ("Publish Smart Contract"))
 	send_count->setPlaceholderText ("0");
 	send_blocks_layout->addWidget (send_count);
 	send_blocks_layout->addWidget (send_token_label);
+	//auto test (rai::get_sc_info_name (rai::chain_token_type));
+	//qDebug () << test.c_str ();
+
+	for ( auto it = rai::map_sc_info.begin(); it != rai::map_sc_info.end(); ++it )
+	{
+		auto name (rai::get_sc_info_name (it->first));
+		std::string token_hash;
+		it->first.encode_hex (token_hash);
+		send_token_type->addItem (QString::fromStdString (name), QString::fromStdString (token_hash));
+	};
+
 	send_blocks_layout->addWidget (send_token_type);
-	//auto default_token = rai::chain_token_type.to_string ().c_str ();
-	send_token_type->setPlaceholderText (rai::chain_token_type.to_string ().c_str ());
-	send_token_type->setText (rai::chain_token_type.to_string ().c_str ());
 	send_blocks_layout->addWidget (send_blocks_send);
 	send_blocks_layout->addStretch ();
 	send_blocks_layout->addWidget (send_blocks_back);
@@ -1282,7 +1297,6 @@ void rai_qt::wallet::start ()
 		{
 			show_line_ok (*this_l->send_count);
 			show_line_ok (*this_l->send_account);
-			show_line_ok (*this_l->send_token_type);
 			rai::amount amount;
 			rai::block_hash token_type;
 			if (!amount.decode_dec (this_l->send_count->text ().toStdString ()))
@@ -1294,71 +1308,54 @@ void rai_qt::wallet::start ()
 					std::string account_text_narrow (account_text.toLocal8Bit ());
 					rai::account account_l;
 					auto parse_error (account_l.decode_account (account_text_narrow));
+
+					auto index (this_l->send_token_type->currentIndex ());
+					auto token_type_text (this_l->send_token_type->itemData (index).toString ());
+					std::string token_type_text_narrow (token_type_text.toLocal8Bit ());
+					token_type.decode_hex (token_type_text_narrow);
+					qDebug () << "Token: " << token_type_text_narrow.c_str ();
+
 					if (!parse_error)
 					{
-						QString token_type_text (this_l->send_token_type->text ());
-						std::string token_type_text_narrow (token_type_text.toLocal8Bit ());
-						parse_error = token_type.decode_hex (token_type_text_narrow);
-						if (!parse_error)
+						rai::transaction transaction (this_l->node.store.environment, nullptr, false);
+						auto balance (this_l->wallet_m->node.ledger.accounts_balance (transaction, this_l->account, token_type));
+						if (actual <= balance)
 						{
-							rai::transaction transaction (this_l->node.store.environment, nullptr, false);
-							auto balance (this_l->wallet_m->node.ledger.accounts_balance (transaction, this_l->account, token_type));
-							if (actual <= balance)
+							if (this_l->wallet_m->store.valid_password (transaction))
 							{
-								if (this_l->wallet_m->store.valid_password (transaction))
-								{
-									this_l->send_blocks_send->setEnabled (false);
-									this_l->node.background ([this_w, account_l, token_type, actual]() {
-										if (auto this_l = this_w.lock ())
-										{
-											this_l->wallet_m->send_async (this_l->account, account_l, token_type, actual, [this_w](std::shared_ptr<rai::block> block_a) {
-												if (auto this_l = this_w.lock ())
-												{
-													auto succeeded (block_a != nullptr);
-													this_l->application.postEvent (&this_l->processor, new eventloop_event ([this_w, succeeded]() {
-														if (auto this_l = this_w.lock ())
+								this_l->send_blocks_send->setEnabled (false);
+								this_l->node.background ([this_w, account_l, token_type, actual]() {
+									if (auto this_l = this_w.lock ())
+									{
+										this_l->wallet_m->send_async (this_l->account, account_l, token_type, actual, [this_w](std::shared_ptr<rai::block> block_a) {
+											if (auto this_l = this_w.lock ())
+											{
+												auto succeeded (block_a != nullptr);
+												this_l->application.postEvent (&this_l->processor, new eventloop_event ([this_w, succeeded]() {
+													if (auto this_l = this_w.lock ())
+													{
+														this_l->send_blocks_send->setEnabled (true);
+														if (succeeded)
 														{
-															this_l->send_blocks_send->setEnabled (true);
-															if (succeeded)
-															{
-																this_l->send_count->clear ();
-																this_l->send_account->clear ();
-																this_l->accounts.refresh ();
-															}
-															else
-															{
-																show_line_error (*this_l->send_count);
-															}
+															this_l->send_count->clear ();
+															this_l->send_account->clear ();
+															this_l->accounts.refresh ();
 														}
-													}));
-												}
-											});
-										}
-									});
-								}
-								else
-								{
-									show_button_error (*this_l->send_blocks_send);
-									this_l->send_blocks_send->setText ("Wallet is locked, unlock it to send");
-									this_l->node.alarm.add (std::chrono::steady_clock::now () + std::chrono::seconds (5), [this_w]() {
-										if (auto this_l = this_w.lock ())
-										{
-											this_l->application.postEvent (&this_l->processor, new eventloop_event ([this_w]() {
-												if (auto this_l = this_w.lock ())
-												{
-													show_button_ok (*this_l->send_blocks_send);
-													this_l->send_blocks_send->setText ("Send");
-												}
-											}));
-										}
-									});
-								}
+														else
+														{
+															show_line_error (*this_l->send_count);
+														}
+													}
+												}));
+											}
+										});
+									}
+								});
 							}
 							else
 							{
-								show_line_error (*this_l->send_count);
 								show_button_error (*this_l->send_blocks_send);
-								this_l->send_blocks_send->setText ("Not enough balance");
+								this_l->send_blocks_send->setText ("Wallet is locked, unlock it to send");
 								this_l->node.alarm.add (std::chrono::steady_clock::now () + std::chrono::seconds (5), [this_w]() {
 									if (auto this_l = this_w.lock ())
 									{
@@ -1375,9 +1372,9 @@ void rai_qt::wallet::start ()
 						}
 						else
 						{
-							show_line_error (*this_l->send_token_type);
+							show_line_error (*this_l->send_count);
 							show_button_error (*this_l->send_blocks_send);
-							this_l->send_blocks_send->setText ("Bad token type");
+							this_l->send_blocks_send->setText ("Not enough balance");
 							this_l->node.alarm.add (std::chrono::steady_clock::now () + std::chrono::seconds (5), [this_w]() {
 								if (auto this_l = this_w.lock ())
 								{
@@ -1643,19 +1640,29 @@ void rai_qt::wallet::change_rendering_ratio (rai::uint128_t const & rendering_ra
 	}));
 }
 
-std::string rai_qt::wallet::format_balance (rai::uint128_t const & balance) const
+std::string rai_qt::wallet::format_balance (rai::uint128_t const & balance, rai::block_hash const & token_type) const
 {
-	auto balance_str = rai::amount (balance).format_balance (rendering_ratio, 0, false);
-	auto unit = std::string ("XRB");
-	if (rendering_ratio == rai::kxrb_ratio)
+	auto sc_info (rai::get_sc_info (token_type));
+	if (!sc_info.empty ())
 	{
-		unit = std::string ("kxrb");
+		std::vector<std::string> v{ std::begin (sc_info), std::end (sc_info) };
+		rai::uint128_t rendering_ratio (v[rai::smart_contract_field::scale]);
+		auto balance_str = rai::amount (balance).format_balance (rendering_ratio, 0, false);
+		auto unit (v[rai::smart_contract_field::unit]);
+		auto lower_unit (unit);
+		std::transform (lower_unit.begin (), lower_unit.end (), lower_unit.begin (), [](unsigned char c) { return std::tolower (c); });
+		if (rendering_ratio == rai::kxrb_ratio)
+		{
+			unit = std::string ("k" + lower_unit);
+		}
+		else if (rendering_ratio == rai::xrb_ratio)
+		{
+			unit = std::string (lower_unit);
+		}
+		return balance_str + " " + unit;
 	}
-	else if (rendering_ratio == rai::xrb_ratio)
-	{
-		unit = std::string ("xrb");
-	}
-	return balance_str + " " + unit;
+
+	return "";
 }
 
 void rai_qt::wallet::push_main_stack (QWidget * widget_a)

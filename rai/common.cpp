@@ -113,6 +113,11 @@ public:
 	rai::account not_an_account;
 	rai::account burn_account;
 	rai::block_hash chain_token_type;
+	std::unordered_map<rai::block_hash, std::list<std::string>> sc_infos = {
+		{ chain_token_type, { "Root_Token", rai::xrb_ratio.convert_to<std::string> (), "8", "QLC" } },
+		// FIXME: 生成合约代码
+		{ rai::block_hash ("8B6123EBD1C2749DA3BF4BB3DD8B3AF9FB34D93DF199133B29415559B1D04DC6"), { "QN1", rai::xrb_ratio.convert_to<std::string> (), "8", "QN1" } },
+	};
 };
 ledger_constants globals;
 }
@@ -140,8 +145,7 @@ rai::block_hash const & rai::not_an_account (globals.not_an_account);
 rai::account const & rai::burn_account (globals.burn_account);
 rai::block_hash const & rai::chain_token_type (globals.chain_token_type);
 std::string const & rai::genesis_smart_contract_block (globals.genesis_smart_contract_block); //QLINK
-
-std::unordered_map<rai::block_hash, std::list<std::string>> rai::map_sc_info;
+std::unordered_map<rai::block_hash, std::list<std::string>> rai::map_sc_info (globals.sc_infos.begin (), globals.sc_infos.end ());
 
 rai::votes::votes (std::shared_ptr<rai::block> block_a) :
 id (block_a->root ())
@@ -902,18 +906,18 @@ void rai::vote::serialize (rai::stream & stream_a)
 	write (stream_a, sequence);
 	rai::serialize_block (stream_a, *block);
 }
-bool rai::vote::deserialize(rai::stream & stream_a)
+bool rai::vote::deserialize (rai::stream & stream_a)
 {
-	auto result(read(stream_a, account));
+	auto result (read (stream_a, account));
 	if (!result)
 	{
-		result = read(stream_a, signature);
+		result = read (stream_a, signature);
 		if (!result)
 		{
-			result = read(stream_a, sequence);
+			result = read (stream_a, sequence);
 			if (!result)
 			{
-				block = rai::deserialize_block(stream_a, block_type());
+				block = rai::deserialize_block (stream_a, block_type ());
 				result = block == nullptr;
 			}
 		}
@@ -962,16 +966,16 @@ rai::genesis_sc_block::genesis_sc_block ()
 	sc_block.reset (static_cast<rai::smart_contract_block *> (block.release ()));
 }
 
-void rai::genesis_sc_block::initialize(MDB_txn * transaction_a, rai::block_store & store_a) const
+void rai::genesis_sc_block::initialize (MDB_txn * transaction_a, rai::block_store & store_a) const
 {
-	auto hash_l(hash());
-	//	std::cout<<hash_l.to_string()<<std::endl;
-	//	std::cout<<sc_block->to_json ();
-	//assert (store_a.latest_begin (transaction_a) == store_a.latest_end ());
-//	store_a.block_put(transaction_a, hash_l, *sc_block);
+	auto hash_l (hash ());
+	std::cout << hash_l.to_string () << std::endl;
+	std::cout << sc_block->to_json ();
+	assert (store_a.latest_begin (transaction_a) == store_a.latest_end ());
+	store_a.block_put (transaction_a, hash_l, *sc_block);
 }
 
-rai::block_hash rai::genesis_sc_block::hash() const
+rai::block_hash rai::genesis_sc_block::hash () const
 {
-	return sc_block->hash();
+	return sc_block->hash ();
 }

@@ -732,42 +732,42 @@ bool rai::bootstrap_attempt::should_log ()
 }
 
 //QLINK:查询指定smart contract block的具体实现
-void rai::bootstrap_attempt::request_smart_contract(std::unique_lock<std::mutex> & lock_a)
+void rai::bootstrap_attempt::request_smart_contract (std::unique_lock<std::mutex> & lock_a)
 {
 	std::shared_ptr<rai::bootstrap_client> connection_l, connection_a;
-	connection_l = connection_a = connection(lock_a);
+	connection_l = connection_a = connection (lock_a);
 	do
 	{
 		if (connection_l)
 		{
-			auto client(std::make_shared<rai::smart_contract_client>(connection_l));
+			auto client (std::make_shared<rai::smart_contract_client> (connection_l));
 			rai::smart_contract_req req;
 			req.token_type = smart_contract_hash;
-			client->request(req);
-			if (node->config.logging.network_logging())
+			client->request (req);
+			if (node->config.logging.network_logging ())
 			{
-				BOOST_LOG(node->log) << boost::str(boost::format("Completed smart contract request, %1% ") % connection_l->endpoint);
+				BOOST_LOG (node->log) << boost::str (boost::format ("Completed smart contract request, %1% ") % connection_l->endpoint);
 			}
-			connection_l = connection(lock_a);
+			connection_l = connection (lock_a);
 		}
 	} while (connection_l->endpoint != connection_a->endpoint);
 }
-void rai::bootstrap_attempt::push_sc_block_to_peers(std::unique_lock<std::mutex> & lock_a)
+void rai::bootstrap_attempt::push_sc_block_to_peers (std::unique_lock<std::mutex> & lock_a)
 {
 	std::shared_ptr<rai::bootstrap_client> connection_l, connection_a;
-	connection_l = connection_a = connection(lock_a);
+	connection_l = connection_a = connection (lock_a);
 	do
 	{
 		if (connection_l)
 		{
-			auto client(std::make_shared<rai::smart_contract_client>(connection_l));
-			client->push_block(sc_block_need_push);
-			if (node->config.logging.network_logging())
+			auto client (std::make_shared<rai::smart_contract_client> (connection_l));
+			client->push_block (sc_block_need_push);
+			if (node->config.logging.network_logging ())
 			{
-				BOOST_LOG(node->log) << "Exiting smart contract push client";
+				BOOST_LOG (node->log) << "Exiting smart contract push client";
 			}
 		}
-		connection_l = connection(lock_a);
+		connection_l = connection (lock_a);
 	} while (connection_l->endpoint != connection_a->endpoint);
 }
 
@@ -781,12 +781,12 @@ bool rai::bootstrap_attempt::request_frontier (std::unique_lock<std::mutex> & lo
 		std::future<bool> future;
 		{
 			auto client (std::make_shared<rai::frontier_req_client> (connection_l));
-				client->run();
+			client->run ();
 			frontiers = client;
 			future = client->promise.get_future ();
 		}
 		lock_a.unlock ();
-		result = consume_future (future);	
+		result = consume_future (future);
 		lock_a.lock ();
 		if (result)
 		{
@@ -858,7 +858,7 @@ bool rai::bootstrap_attempt::still_pulling ()
 void rai::bootstrap_attempt::run ()
 {
 	populate_connections ();
-	handle_smart_block();
+	handle_smart_block ();
 	std::unique_lock<std::mutex> lock (mutex);
 
 	auto frontier_failure (true);
@@ -958,142 +958,142 @@ unsigned rai::bootstrap_attempt::target_connections (size_t pulls_remaining)
 	double target = (double)node->config.bootstrap_connections + (double)(node->config.bootstrap_connections_max - node->config.bootstrap_connections) * step;
 	return std::max (1U, (unsigned)(target + 0.5f));
 }
-void rai::bootstrap_attempt::handle_smart_block()
+void rai::bootstrap_attempt::handle_smart_block ()
 {
-	std::unique_lock<std::mutex> lock(mutex);
-	if (node->sc_blocks.size() > 0)
+	std::unique_lock<std::mutex> lock (mutex);
+	if (node->sc_blocks.size () > 0)
 	{
-		node->mutex_sc_blocks.lock();
-		for (int i = 0; i < node->sc_blocks.size(); i++)
+		node->mutex_sc_blocks.lock ();
+		for (int i = 0; i < node->sc_blocks.size (); i++)
 		{
-			sc_block_need_push = (node->sc_blocks.at(i));
-			push_sc_block_to_peers(lock);
+			sc_block_need_push = (node->sc_blocks.at (i));
+			push_sc_block_to_peers (lock);
 		}
-		node->sc_blocks.clear();
-		node->mutex_sc_blocks.unlock();
+		node->sc_blocks.clear ();
+		node->mutex_sc_blocks.unlock ();
 	}
-	if (node->smart_contract_hashs.size() > 0)
+	if (node->smart_contract_hashs.size () > 0)
 	{
-		node->mutex_smart_contract_hashs.lock();
-		for (int i = 0; i < node->smart_contract_hashs.size(); i++)
+		node->mutex_smart_contract_hashs.lock ();
+		for (int i = 0; i < node->smart_contract_hashs.size (); i++)
 		{
-			smart_contract_hash = (node->smart_contract_hashs.at(i));
-			request_smart_contract(lock);
+			smart_contract_hash = (node->smart_contract_hashs.at (i));
+			request_smart_contract (lock);
 		}
-		node->smart_contract_hashs.clear();
-		node->mutex_smart_contract_hashs.unlock();
+		node->smart_contract_hashs.clear ();
+		node->mutex_smart_contract_hashs.unlock ();
 	}
 	if (!stopped)
 	{
-		std::weak_ptr<rai::bootstrap_attempt> this_w(shared_from_this());
-		node->alarm.add(std::chrono::steady_clock::now() + std::chrono::seconds(20), [this_w]() {
-			if (auto this_l = this_w.lock())
+		std::weak_ptr<rai::bootstrap_attempt> this_w (shared_from_this ());
+		node->alarm.add (std::chrono::steady_clock::now () + std::chrono::seconds (20), [this_w]() {
+			if (auto this_l = this_w.lock ())
 			{
-				BOOST_LOG(this_l->node->log) << boost::str(boost::format("alarm handle sc bloc run........"));
-				this_l->handle_smart_block();
+				BOOST_LOG (this_l->node->log) << boost::str (boost::format ("alarm handle sc bloc run........"));
+				this_l->handle_smart_block ();
 			}
 		});
 	}
 }
 
-void rai::bootstrap_attempt::populate_connections()
+void rai::bootstrap_attempt::populate_connections ()
 {
 	double rate_sum = 0.0;
 	size_t num_pulls = 0;
 	std::priority_queue<std::shared_ptr<rai::bootstrap_client>, std::vector<std::shared_ptr<rai::bootstrap_client>>, block_rate_cmp> sorted_connections;
 	{
-		std::unique_lock<std::mutex> lock(mutex);
-		num_pulls = pulls.size();
+		std::unique_lock<std::mutex> lock (mutex);
+		num_pulls = pulls.size ();
 		for (auto & c : clients)
 		{
-			if (auto client = c.lock())
+			if (auto client = c.lock ())
 			{
-				double elapsed_sec = client->elapsed_seconds();
-				auto blocks_per_sec = client->block_rate();
+				double elapsed_sec = client->elapsed_seconds ();
+				auto blocks_per_sec = client->block_rate ();
 				rate_sum += blocks_per_sec;
-				if (client->elapsed_seconds() > bootstrap_connection_warmup_time_sec && client->block_count > 0)
+				if (client->elapsed_seconds () > bootstrap_connection_warmup_time_sec && client->block_count > 0)
 				{
-					sorted_connections.push(client);
+					sorted_connections.push (client);
 				}
 				// Force-stop the slowest peers, since they can take the whole bootstrap hostage by dribbling out blocks on the last remaining pull.
 				// This is ~1.5kilobits/sec.
 				if (elapsed_sec > bootstrap_minimum_termination_time_sec && blocks_per_sec < bootstrap_minimum_blocks_per_sec)
 				{
-					if (node->config.logging.bulk_pull_logging())
+					if (node->config.logging.bulk_pull_logging ())
 					{
-						BOOST_LOG(node->log) << boost::str(boost::format("Stopping slow peer %1% (elapsed sec %2%s > %3%s and %4% blocks per second < %5%)") % client->endpoint.address().to_string() % elapsed_sec % bootstrap_minimum_termination_time_sec % blocks_per_sec % bootstrap_minimum_blocks_per_sec);
+						BOOST_LOG (node->log) << boost::str (boost::format ("Stopping slow peer %1% (elapsed sec %2%s > %3%s and %4% blocks per second < %5%)") % client->endpoint.address ().to_string () % elapsed_sec % bootstrap_minimum_termination_time_sec % blocks_per_sec % bootstrap_minimum_blocks_per_sec);
 					}
 
-					client->stop(true);
+					client->stop (true);
 				}
 			}
 		}
 	}
 
-	auto target = target_connections(num_pulls);
+	auto target = target_connections (num_pulls);
 
 	// We only want to drop slow peers when more than 2/3 are active. 2/3 because 1/2 is too aggressive, and 100% rarely happens.
 	// Probably needs more tuning.
-	if (sorted_connections.size() >= (target * 2) / 3 && target >= 4)
+	if (sorted_connections.size () >= (target * 2) / 3 && target >= 4)
 	{
 		// 4 -> 1, 8 -> 2, 16 -> 4, arbitrary, but seems to work well.
-		auto drop = (int)roundf(sqrtf((float)target - 2.0f));
+		auto drop = (int)roundf (sqrtf ((float)target - 2.0f));
 
-		if (node->config.logging.bulk_pull_logging())
+		if (node->config.logging.bulk_pull_logging ())
 		{
-			BOOST_LOG(node->log) << boost::str(boost::format("Dropping %1% bulk pull peers, target connections %2%") % drop % target);
+			BOOST_LOG (node->log) << boost::str (boost::format ("Dropping %1% bulk pull peers, target connections %2%") % drop % target);
 		}
 
 		for (int i = 0; i < drop; i++)
 		{
-			auto client = sorted_connections.top();
+			auto client = sorted_connections.top ();
 
-			if (node->config.logging.bulk_pull_logging())
+			if (node->config.logging.bulk_pull_logging ())
 			{
-				BOOST_LOG(node->log) << boost::str(boost::format("Dropping peer with block rate %1%, block count %2% (%3%) ") % client->block_rate() % client->block_count % client->endpoint.address().to_string());
+				BOOST_LOG (node->log) << boost::str (boost::format ("Dropping peer with block rate %1%, block count %2% (%3%) ") % client->block_rate () % client->block_count % client->endpoint.address ().to_string ());
 			}
 
-			client->stop(false);
-			sorted_connections.pop();
+			client->stop (false);
+			sorted_connections.pop ();
 		}
 	}
 
-	if (node->config.logging.bulk_pull_logging())
+	if (node->config.logging.bulk_pull_logging ())
 	{
-		std::unique_lock<std::mutex> lock(mutex);
-		BOOST_LOG(node->log) << boost::str(boost::format("Bulk pull connections: %1%, rate: %2% blocks/sec, remaining account pulls: %3%, total blocks: %4%") % connections.load() % (int)rate_sum % pulls.size() % (int)total_blocks.load());
+		std::unique_lock<std::mutex> lock (mutex);
+		BOOST_LOG (node->log) << boost::str (boost::format ("Bulk pull connections: %1%, rate: %2% blocks/sec, remaining account pulls: %3%, total blocks: %4%") % connections.load () % (int)rate_sum % pulls.size () % (int)total_blocks.load ());
 	}
 
 	if (connections < target)
 	{
-		auto delta = std::min((target - connections) * 2, bootstrap_max_new_connections);
+		auto delta = std::min ((target - connections) * 2, bootstrap_max_new_connections);
 		// TODO - tune this better
 		// Not many peers respond, need to try to make more connections than we need.
 		for (int i = 0; i < delta; i++)
 		{
-			auto peer(node->peers.bootstrap_peer());
-			if (peer != rai::endpoint(boost::asio::ip::address_v6::any(), 0))
+			auto peer (node->peers.bootstrap_peer ());
+			if (peer != rai::endpoint (boost::asio::ip::address_v6::any (), 0))
 			{
-				auto client(std::make_shared<rai::bootstrap_client>(node, shared_from_this(), rai::tcp_endpoint(peer.address(), peer.port())));
-				client->run();
-				std::lock_guard<std::mutex> lock(mutex);
-				clients.push_back(client);
+				auto client (std::make_shared<rai::bootstrap_client> (node, shared_from_this (), rai::tcp_endpoint (peer.address (), peer.port ())));
+				client->run ();
+				std::lock_guard<std::mutex> lock (mutex);
+				clients.push_back (client);
 			}
 			else if (connections == 0)
 			{
-				BOOST_LOG(node->log) << boost::str(boost::format("Bootstrap stopped because there are no peers"));
+				BOOST_LOG (node->log) << boost::str (boost::format ("Bootstrap stopped because there are no peers"));
 				stopped = true;
-				condition.notify_all();
+				condition.notify_all ();
 			}
 		}
 	}
 	if (!stopped)
 	{
-		std::weak_ptr<rai::bootstrap_attempt> this_w(shared_from_this());
-		node->alarm.add(std::chrono::steady_clock::now() + std::chrono::seconds(1), [this_w]() {
-			if (auto this_l = this_w.lock())
+		std::weak_ptr<rai::bootstrap_attempt> this_w (shared_from_this ());
+		node->alarm.add (std::chrono::steady_clock::now () + std::chrono::seconds (1), [this_w]() {
+			if (auto this_l = this_w.lock ())
 			{
-				this_l->populate_connections();
+				this_l->populate_connections ();
 			}
 		});
 	}
@@ -1196,7 +1196,7 @@ void rai::bootstrap_attempt::add_bulk_push_target (rai::block_hash const & head,
 rai::bootstrap_initiator::bootstrap_initiator (rai::node & node_a) :
 node (node_a),
 stopped (false),
-thread([this]() { run_bootstrap(); })
+thread ([this]() { run_bootstrap (); })
 {
 }
 
@@ -2275,13 +2275,13 @@ void rai::smart_contract_req_server::send ()
 	rai::transaction transaction (connection->node->store.environment, nullptr, false);
 
 	auto block (connection->node->store.block_get (transaction, request->token_type));
-	if(block!=nullptr)
+	if (block != nullptr)
 	{
 		if (block->type () == rai::block_type::smart_contract)
 		{
-			if (auto sc_block_1 = dynamic_cast<rai::smart_contract_block *> (block.get()))
+			if (auto sc_block_1 = dynamic_cast<rai::smart_contract_block *> (block.get ()))
 			{
-				rai::smart_contract_msg message (std::make_shared<rai::smart_contract_block>(*sc_block_1));
+				rai::smart_contract_msg message (std::make_shared<rai::smart_contract_block> (*sc_block_1));
 				auto buffer (std::make_shared<std::vector<uint8_t>> ());
 				{
 					rai::vectorstream stream (*buffer);
@@ -2309,7 +2309,8 @@ void rai::smart_contract_req_server::send ()
 		}
 	}
 	else
-	{	if (connection->node->config.logging.smart_contract_logging ())
+	{
+		if (connection->node->config.logging.smart_contract_logging ())
 		{
 			BOOST_LOG (connection->node->log) << boost::str (boost::format ("smart_contract_req:Unable to find the smart contract block you want"));
 		}
@@ -2329,25 +2330,25 @@ rai::smart_contract_server::~smart_contract_server ()
 void rai::smart_contract_server::receive ()
 {
 	auto this_l (shared_from_this ());
-	sc_msg.reserve(8);
-	sc_msg.assign(connection->receive_buffer.data (),connection->receive_buffer.data ()+8);
-	sc_msg_transfer.reserve(8);
-	boost::asio::async_read (*connection->socket, boost::asio::buffer (sc_msg_transfer.data(), sizeof(size_t)), [this_l](boost::system::error_code const & ec, size_t size_a) {
+	sc_msg.reserve (8);
+	sc_msg.assign (connection->receive_buffer.data (), connection->receive_buffer.data () + 8);
+	sc_msg_transfer.reserve (8);
+	boost::asio::async_read (*connection->socket, boost::asio::buffer (sc_msg_transfer.data (), sizeof (size_t)), [this_l](boost::system::error_code const & ec, size_t size_a) {
 		if (!ec)
 		{
-			this_l->sc_msg.reserve(8+sizeof(size_t));
-			this_l->sc_msg.insert(this_l->sc_msg.end(), this_l->sc_msg_transfer.begin(), this_l->sc_msg_transfer.begin() + sizeof(size_t));
-			rai::bufferstream stream (this_l->sc_msg_transfer.data (), sizeof(size_t));
+			this_l->sc_msg.reserve (8 + sizeof (size_t));
+			this_l->sc_msg.insert (this_l->sc_msg.end (), this_l->sc_msg_transfer.begin (), this_l->sc_msg_transfer.begin () + sizeof (size_t));
+			rai::bufferstream stream (this_l->sc_msg_transfer.data (), sizeof (size_t));
 			size_t len_sc_info;
-			auto result = rai::read (stream,len_sc_info);
+			auto result = rai::read (stream, len_sc_info);
 			if (!result)
 			{
-				this_l->sc_msg_transfer.clear();
-				this_l->sc_msg_transfer.reserve(len_sc_info);
-				boost::asio::async_read(*this_l->connection->socket, boost::asio::buffer(this_l->sc_msg_transfer.data(),len_sc_info), [this_l](boost::system::error_code const & ec_1, size_t size_b) {
-					this_l->sc_msg.reserve(8 + sizeof(size_t)+ size_b);
-					this_l->sc_msg.insert(this_l->sc_msg.end(), this_l->sc_msg_transfer.begin(), this_l->sc_msg_transfer.begin() + size_b);
-					this_l->received_block(ec_1, size_b);
+				this_l->sc_msg_transfer.clear ();
+				this_l->sc_msg_transfer.reserve (len_sc_info);
+				boost::asio::async_read (*this_l->connection->socket, boost::asio::buffer (this_l->sc_msg_transfer.data (), len_sc_info), [this_l](boost::system::error_code const & ec_1, size_t size_b) {
+					this_l->sc_msg.reserve (8 + sizeof (size_t) + size_b);
+					this_l->sc_msg.insert (this_l->sc_msg.end (), this_l->sc_msg_transfer.begin (), this_l->sc_msg_transfer.begin () + size_b);
+					this_l->received_block (ec_1, size_b);
 				});
 			}
 			else
@@ -2375,25 +2376,23 @@ void rai::smart_contract_server::received_block (boost::system::error_code const
 
 		auto error_l (sc_info.deserialize (stream));
 		if (!error_l)
-		{		
-			std::cout << sc_info.smart_contract->to_json() << std::endl;
+		{
+			std::cout << sc_info.smart_contract->to_json () << std::endl;
 			if (!rai::validate_message (sc_info.smart_contract->hashables.sc_owner_account, sc_info.smart_contract->hash (), sc_info.smart_contract->signature) && (sc_info.smart_contract->hashables.hash_abi () == sc_info.smart_contract->hashables.abi_hash))
 			{
 				rai::transaction transaction (connection->node->store.environment, nullptr, true);
 				auto block (connection->node->store.block_get (transaction, sc_info.smart_contract->hash ()));
 				if (block == nullptr)
 				{
-					
 					rai::block_hash successor (0);
 					connection->node->store.block_put (transaction, sc_info.smart_contract->hash (), *sc_info.smart_contract, successor);
 					result = rai::smart_contract_result::success;
 					BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("smart_contract_result is success"));
 					//QLINK,把收到的smart contract block放到队列中
-					connection->node->mutex_sc_blocks.lock();
+					connection->node->mutex_sc_blocks.lock ();
 					connection->node->sc_blocks.push_back (sc_info.smart_contract);
-					connection->node->mutex_sc_blocks.unlock();
-					connection->node->bootstrap_initiator.bootstrap();
-					
+					connection->node->mutex_sc_blocks.unlock ();
+					connection->node->bootstrap_initiator.bootstrap ();
 				}
 				else
 				{
@@ -2471,27 +2470,27 @@ void rai::smart_contract_client::request (rai::smart_contract_req const & req)
 }
 
 //QLINK
-void rai::smart_contract_client::receive_block()
+void rai::smart_contract_client::receive_block ()
 {
-	auto this_l(shared_from_this());
-	connection->start_timeout();
-	boost::asio::async_read(connection->socket, boost::asio::buffer(connection->receive_buffer.data(), 8 + sizeof(size_t)), [this_l](boost::system::error_code const & ec, size_t size_a) {
-		this_l->connection->stop_timeout();
+	auto this_l (shared_from_this ());
+	connection->start_timeout ();
+	boost::asio::async_read (connection->socket, boost::asio::buffer (connection->receive_buffer.data (), 8 + sizeof (size_t)), [this_l](boost::system::error_code const & ec, size_t size_a) {
+		this_l->connection->stop_timeout ();
 		if (!ec)
 		{
-			rai::bufferstream stream(this_l->connection->receive_buffer.data() + 8, sizeof(size_t));
+			rai::bufferstream stream (this_l->connection->receive_buffer.data () + 8, sizeof (size_t));
 			size_t len_sc_info;
-			auto result = rai::read(stream, len_sc_info);
-			this_l->sc_msg.reserve(8 + sizeof(size_t));
-			this_l->sc_msg.assign(this_l->connection->receive_buffer.data(), this_l->connection->receive_buffer.data() + 8 + sizeof(size_t));
+			auto result = rai::read (stream, len_sc_info);
+			this_l->sc_msg.reserve (8 + sizeof (size_t));
+			this_l->sc_msg.assign (this_l->connection->receive_buffer.data (), this_l->connection->receive_buffer.data () + 8 + sizeof (size_t));
 			if (!result)
 			{
-				this_l->sc_msg_transfer.clear();
-				this_l->sc_msg_transfer.reserve(len_sc_info);
-				boost::asio::async_read(this_l->connection->socket, boost::asio::buffer(this_l->sc_msg_transfer.data(), len_sc_info), [this_l](boost::system::error_code const & ec_1, size_t size_b) {
-					this_l->sc_msg.reserve(8 + sizeof(size_t) + size_b);
-					this_l->sc_msg.insert(this_l->sc_msg.end(), this_l->sc_msg_transfer.begin(), this_l->sc_msg_transfer.begin() + size_b);
-					this_l->receive_block(ec_1, size_b);
+				this_l->sc_msg_transfer.clear ();
+				this_l->sc_msg_transfer.reserve (len_sc_info);
+				boost::asio::async_read (this_l->connection->socket, boost::asio::buffer (this_l->sc_msg_transfer.data (), len_sc_info), [this_l](boost::system::error_code const & ec_1, size_t size_b) {
+					this_l->sc_msg.reserve (8 + sizeof (size_t) + size_b);
+					this_l->sc_msg.insert (this_l->sc_msg.end (), this_l->sc_msg_transfer.begin (), this_l->sc_msg_transfer.begin () + size_b);
+					this_l->receive_block (ec_1, size_b);
 				});
 			}
 			else
@@ -2500,50 +2499,50 @@ void rai::smart_contract_client::receive_block()
 		}
 		else
 		{
-			BOOST_LOG(this_l->connection->node->log) << boost::str(boost::format("Error receiving block type: %1%") % ec.message());
+			BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("Error receiving block type: %1%") % ec.message ());
 		}
 	});
 }
 
 //QLINK
-void rai::smart_contract_client::receive_block(boost::system::error_code const & ec, size_t size_a)
+void rai::smart_contract_client::receive_block (boost::system::error_code const & ec, size_t size_a)
 {
 	if (!ec)
 	{
-		auto this_l(shared_from_this());
+		auto this_l (shared_from_this ());
 		rai::smart_contract_msg sc_info;
-		rai::bufferstream stream(sc_msg.data(), 8 + sizeof(size_t) + size_a);
+		rai::bufferstream stream (sc_msg.data (), 8 + sizeof (size_t) + size_a);
 
-		auto error_l(sc_info.deserialize(stream));
+		auto error_l (sc_info.deserialize (stream));
 		if (!error_l)
 		{
-			if (!rai::validate_message(sc_info.smart_contract->hashables.sc_owner_account, sc_info.smart_contract->hash(), sc_info.smart_contract->signature) && (sc_info.smart_contract->hashables.hash_abi() == sc_info.smart_contract->hashables.abi_hash))
+			if (!rai::validate_message (sc_info.smart_contract->hashables.sc_owner_account, sc_info.smart_contract->hash (), sc_info.smart_contract->signature) && (sc_info.smart_contract->hashables.hash_abi () == sc_info.smart_contract->hashables.abi_hash))
 			{
-				if (connection->node->config.logging.smart_contract_logging())
+				if (connection->node->config.logging.smart_contract_logging ())
 				{
 					std::string block;
-					sc_info.smart_contract->serialize_json(block);
-					BOOST_LOG(this_l->connection->node->log) << boost::str(boost::format("receive smart contract block %1%: %2%") % sc_info.smart_contract->hash().to_string() % block);
+					sc_info.smart_contract->serialize_json (block);
+					BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("receive smart contract block %1%: %2%") % sc_info.smart_contract->hash ().to_string () % block);
 				}
-				rai::transaction transaction(connection->node->store.environment, nullptr, true);
-				rai::block_hash successor(0);
-				connection->node->store.block_put(transaction, sc_info.smart_contract->hash(), *sc_info.smart_contract, successor);
-				connection->node->block_processor.queue_unchecked(transaction, sc_info.smart_contract->hash());
+				rai::transaction transaction (connection->node->store.environment, nullptr, true);
+				rai::block_hash successor (0);
+				connection->node->store.block_put (transaction, sc_info.smart_contract->hash (), *sc_info.smart_contract, successor);
+				connection->node->block_processor.queue_unchecked (transaction, sc_info.smart_contract->hash ());
 			}
 		}
 		else
 		{
-			if (connection->node->config.logging.smart_contract_logging())
+			if (connection->node->config.logging.smart_contract_logging ())
 			{
-				BOOST_LOG(this_l->connection->node->log) << boost::str(boost::format("Error deserialize sc_info"));
+				BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("Error deserialize sc_info"));
 			}
 		}
 	}
 	else
 	{
-		if (connection->node->config.logging.smart_contract_logging())
+		if (connection->node->config.logging.smart_contract_logging ())
 		{
-			BOOST_LOG(connection->node->log) << boost::str(boost::format("Error smart contract receiving block: %1%") % ec.message());
+			BOOST_LOG (connection->node->log) << boost::str (boost::format ("Error smart contract receiving block: %1%") % ec.message ());
 		}
 	}
 }
@@ -2554,7 +2553,7 @@ void rai::smart_contract_client::push_block (std::shared_ptr<rai::smart_contract
 	auto buffer (std::make_shared<std::vector<uint8_t>> ());
 	{
 		rai::vectorstream stream (*buffer);
-		message.serialize (stream);	
+		message.serialize (stream);
 	}
 	auto this_l (shared_from_this ());
 	connection->start_timeout ();
@@ -2562,7 +2561,7 @@ void rai::smart_contract_client::push_block (std::shared_ptr<rai::smart_contract
 		this_l->connection->stop_timeout ();
 		if (!ec)
 		{
-			if(this_l->connection->node->config.logging.smart_contract_logging ())
+			if (this_l->connection->node->config.logging.smart_contract_logging ())
 			{
 				BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("success push smart contract block to : %1%") % this_l->connection->socket.remote_endpoint ());
 			}
@@ -2570,7 +2569,7 @@ void rai::smart_contract_client::push_block (std::shared_ptr<rai::smart_contract
 		}
 		else
 		{
-			if(this_l->connection->node->config.logging.smart_contract_logging ())
+			if (this_l->connection->node->config.logging.smart_contract_logging ())
 			{
 				BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("Error push smart contract block: %1%") % ec.message ());
 			}
@@ -2610,7 +2609,7 @@ void rai::smart_contract_client::receive_smart_contract_ack (boost::system::erro
 		rai::smart_contract_result result;
 		auto error1 (rai::read (stream, result));
 		assert (!error1);
-		if(connection->node->config.logging.smart_contract_logging ())
+		if (connection->node->config.logging.smart_contract_logging ())
 		{
 			if (result == rai::smart_contract_result::success)
 			{
@@ -2633,7 +2632,7 @@ void rai::smart_contract_client::receive_smart_contract_ack (boost::system::erro
 	}
 	else
 	{
-		if(connection->node->config.logging.smart_contract_logging ())
+		if (connection->node->config.logging.smart_contract_logging ())
 		{
 			BOOST_LOG (connection->node->log) << boost::str (boost::format ("Error receive smart contract ack: %1%") % ec.message ());
 		}

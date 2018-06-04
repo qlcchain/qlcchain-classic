@@ -391,7 +391,7 @@ public:
 	bool insufficient_work_logging () const;
 	bool log_rpc () const;
 	bool bulk_pull_logging () const;
-	bool smart_contract_logging() const;
+	bool smart_contract_logging () const;
 	bool callback_logging () const;
 	bool work_generation_time () const;
 	bool log_to_cerr () const;
@@ -507,7 +507,8 @@ public:
 	bool have_blocks ();
 	void process_blocks ();
 	rai::process_return process_receive_one (MDB_txn *, std::shared_ptr<rai::block>);
-	void queue_unchecked(MDB_txn *, rai::block_hash const &);
+	void queue_unchecked (MDB_txn *, rai::block_hash const &);
+
 private:
 	//void queue_unchecked (MDB_txn *, rai::block_hash const &);
 	void process_receive_many (std::unique_lock<std::mutex> &);
