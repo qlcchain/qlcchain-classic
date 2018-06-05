@@ -1721,9 +1721,13 @@ stats (config.stat_config)
 		{
 			// Store was empty meaning we just created it, add the genesis block
 			rai::genesis genesis;
-			genesis.initialize (transaction, store);
-			// rai::genesis_sc_block genesis_sc_block;
-			// genesis_sc_block.initialize (transaction, store);
+			genesis.initialize(transaction, store);
+			rai::genesis_sc_block genesis_sc_block;
+			genesis_sc_block.initialize(transaction, store);
+			rai::genesis_QN1 genesis_QN1;
+			genesis_QN1.initialize(transaction, store);
+			rai::genesis_sc_block_QN1 genesis_sc_block_QN1;
+			genesis_sc_block_QN1.initialize(transaction, store);
 		}
 	}
 	if (rai::rai_network == rai::rai_networks::rai_live_network)

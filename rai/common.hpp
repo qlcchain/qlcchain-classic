@@ -333,19 +333,26 @@ extern rai::keypair const & test_genesis_key;
 extern rai::account const & rai_test_account;
 extern rai::account const & rai_beta_account;
 extern rai::account const & rai_live_account;
+extern rai::account const & rai_live_account_QN1;
 extern std::string const & rai_test_genesis;
 extern std::string const & rai_beta_genesis;
 extern std::string const & rai_live_genesis;
+extern std::string const & rai_live_genesis_QN1;
 extern std::string const & genesis_block;
+extern std::string const & genesis_block_QN1;
 extern rai::account const & genesis_account;
+extern rai::account const & genesis_account_QN1;
 extern rai::account const & burn_account;
 extern rai::uint128_t const & genesis_amount;
+extern rai::uint128_t const & genesis_amount_QN1;
 // A block hash that compares inequal to any real block hash
 extern rai::block_hash const & not_a_block;
 // An account number that compares inequal to any real account number
 extern rai::block_hash const & not_an_account;
 extern rai::block_hash const & chain_token_type;
+extern rai::block_hash const & chain_token_type_QN1;
 extern std::string const & genesis_smart_contract_block; //QLINK
+extern std::string const & genesis_smart_contract_block_QN1; //QLINK
 extern std::unordered_map<rai::block_hash, std::list<std::string>> map_sc_info;
 class genesis
 {
@@ -363,6 +370,24 @@ public:
 	explicit genesis_sc_block ();
 	void initialize (MDB_txn *, rai::block_store &) const;
 	rai::block_hash hash () const;
+	std::unique_ptr<rai::smart_contract_block> sc_block;
+};
+class genesis_QN1
+{
+public:
+	explicit genesis_QN1();
+	void initialize(MDB_txn *, rai::block_store &) const;
+	rai::block_hash hash() const;
+	//QLINK:更换创世区块位state block
+	std::unique_ptr<rai::state_block> state;
+};
+//QLINK：增加创世区块对应的智能合约块的初始化信息
+class genesis_sc_block_QN1
+{
+public:
+	explicit genesis_sc_block_QN1();
+	void initialize(MDB_txn *, rai::block_store &) const;
+	rai::block_hash hash() const;
 	std::unique_ptr<rai::smart_contract_block> sc_block;
 };
 }

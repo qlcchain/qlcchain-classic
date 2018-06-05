@@ -82,9 +82,10 @@ int main (int argc, char * const * argv)
 				}
 				rai::uint128_t balance (std::numeric_limits<rai::uint128_t>::max ());
 				//rai::open_block genesis_block (genesis.pub, genesis.pub, genesis.pub, genesis.prv, genesis.pub, work.generate (genesis.pub));
-				rai::state_block genesis_block (genesis.pub, 0, genesis.pub, balance, genesis.pub, rai::chain_token_type, genesis.prv, genesis.pub, work.generate (genesis.pub));
-
-				std::cout << genesis_block.to_json ();
+				rai::state_block genesis_block(genesis.pub, 0, genesis.pub, balance, genesis.pub, rai::chain_token_type, genesis.prv, genesis.pub, work.generate(genesis.pub));
+				rai::state_block genesis_block_QN1(genesis.pub, 0, genesis.pub, balance, genesis.pub, rai::chain_token_type_QN1, genesis.prv, genesis.pub, work.generate(genesis.pub));
+				std::cout << genesis_block.to_json();
+				std::cout << genesis_block_QN1.to_json();
 				rai::block_hash previous (genesis_block.hash ());
 				for (auto i (0); i != 8; ++i)
 				{
