@@ -1448,7 +1448,7 @@ void rai::bootstrap_server::receive_header_action (boost::system::error_code con
 				{
 					node->stats.inc (rai::stat::type::bootstrap, rai::stat::detail::smart_contract_req, rai::stat::dir::in);
 					auto this_l (shared_from_this ());
-					boost::asio::async_read (*socket, boost::asio::buffer (receive_buffer.data () + 8, sizeof (rai::uint256_union)), [this_l](boost::system::error_code const & ec, size_t size_a) {
+					socket->async_read (receive_buffer, sizeof (rai::uint256_union), [this_l](boost::system::error_code const & ec, size_t size_a) {
 						this_l->receive_smart_contract_req_action (ec, size_a);
 					});
 					break;
@@ -1549,7 +1549,7 @@ void rai::bootstrap_server::receive_smart_contract_req_action (boost::system::er
 	if (!ec)
 	{
 		std::unique_ptr<rai::smart_contract_req> request (new rai::smart_contract_req);
-		rai::bufferstream stream (receive_buffer.data (), 8 + sizeof (rai::uint256_union));
+		rai::bufferstream stream (receive_buffer->data (), 8 + sizeof (rai::uint256_union));
 		auto error (request->deserialize (stream));
 		if (!error)
 		{
@@ -1575,7 +1575,7 @@ void rai::bootstrap_server::receive_smart_contract_action (boost::system::error_
 	if (!ec)
 	{
 		std::unique_ptr<rai::smart_contract_msg> request (new rai::smart_contract_msg);
-		rai::bufferstream stream (receive_buffer.data (), 8 + sizeof (size_t) + size_a);
+		rai::bufferstream stream (receive_buffer->data (), 8 + sizeof (size_t) + size_a);
 		auto error (request->deserialize (stream));
 		if (!error)
 		{
@@ -1668,19 +1668,11 @@ public:
 		auto response (std::make_shared<rai::smart_contract_req_server> (connection, std::unique_ptr<rai::smart_contract_req> (static_cast<rai::smart_contract_req *> (connection->requests.front ().release ()))));
 		response->send ();
 	}
-	// TODO: 实现
-	// AUTHOR: goreng
 	void smart_contract (rai::smart_contract_msg const &) override
 	{
-		//  接收 sc
-		// 校验
-		// 根据校验结构会 ack/nack
-		// 转发 SC
 		auto response (std::make_shared<rai::smart_contract_server> (connection));
 		response->receive ();
 	}
-	// TODO: 实现
-	// AUTHOR: goreng
 	void smart_contract_ack (rai::smart_contract_ack const &) override
 	{
 		// 相应 SC 接收内容
@@ -2288,7 +2280,7 @@ void rai::smart_contract_req_server::send ()
 					message.serialize (stream);
 				}
 				auto this_l (shared_from_this ());
-				boost::asio::async_write (*connection->socket, boost::asio::buffer (buffer->data (), buffer->size ()), [this_l, buffer](boost::system::error_code const & ec, size_t size_a) {
+				connection->socket->async_write (buffer, [this_l, buffer](boost::system::error_code const & ec, size_t size_a) {
 					rai::transaction transaction (this_l->connection->node->store.environment, nullptr, false);
 					if (!ec)
 					{
@@ -2331,9 +2323,10 @@ void rai::smart_contract_server::receive ()
 {
 	auto this_l (shared_from_this ());
 	sc_msg.reserve (8);
-	sc_msg.assign (connection->receive_buffer.data (), connection->receive_buffer.data () + 8);
+	sc_msg.assign (connection->receive_buffer->data (), connection->receive_buffer->data () + 8);
 	sc_msg_transfer.reserve (8);
-	boost::asio::async_read (*connection->socket, boost::asio::buffer (sc_msg_transfer.data (), sizeof (size_t)), [this_l](boost::system::error_code const & ec, size_t size_a) {
+	auto buff (std::make_shared<std::vector<uint8_t>> (sc_msg_transfer));
+	connection->socket->async_read (buff, sizeof (size_t), [this_l](boost::system::error_code const & ec, size_t size_a) {
 		if (!ec)
 		{
 			this_l->sc_msg.reserve (8 + sizeof (size_t));
@@ -2345,7 +2338,8 @@ void rai::smart_contract_server::receive ()
 			{
 				this_l->sc_msg_transfer.clear ();
 				this_l->sc_msg_transfer.reserve (len_sc_info);
-				boost::asio::async_read (*this_l->connection->socket, boost::asio::buffer (this_l->sc_msg_transfer.data (), len_sc_info), [this_l](boost::system::error_code const & ec_1, size_t size_b) {
+				auto buff (std::make_shared<std::vector<uint8_t>> (this_l->sc_msg_transfer));
+				this_l->connection->socket->async_read (buff, len_sc_info, [this_l](boost::system::error_code const & ec_1, size_t size_b) {
 					this_l->sc_msg.reserve (8 + sizeof (size_t) + size_b);
 					this_l->sc_msg.insert (this_l->sc_msg.end (), this_l->sc_msg_transfer.begin (), this_l->sc_msg_transfer.begin () + size_b);
 					this_l->received_block (ec_1, size_b);
@@ -2413,7 +2407,7 @@ void rai::smart_contract_server::received_block (boost::system::error_code const
 				ack.serialize (stream);
 			}
 			auto this_l (shared_from_this ());
-			boost::asio::async_write (*connection->socket, boost::asio::buffer (buffer->data (), buffer->size ()), [this_l, buffer](boost::system::error_code const & ec, size_t size_a) {
+			connection->socket->async_write (buffer, [this_l, buffer](boost::system::error_code const & ec, size_t size_a) {
 				if (!ec)
 				{
 					BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("send smart_contract_ack  reply: %1%") % ec.message ());
@@ -2452,9 +2446,7 @@ void rai::smart_contract_client::request (rai::smart_contract_req const & req)
 		request.serialize (stream);
 	}
 	auto this_l (shared_from_this ());
-	connection->start_timeout ();
-	boost::asio::async_write (connection->socket, boost::asio::buffer (send_buffer->data (), send_buffer->size ()), [this_l, send_buffer](boost::system::error_code const & ec, size_t size_a) {
-		this_l->connection->stop_timeout ();
+	connection->socket->async_write (send_buffer, [this_l, send_buffer](boost::system::error_code const & ec, size_t size_a) {
 		if (!ec)
 		{
 			this_l->receive_block ();
@@ -2473,21 +2465,20 @@ void rai::smart_contract_client::request (rai::smart_contract_req const & req)
 void rai::smart_contract_client::receive_block ()
 {
 	auto this_l (shared_from_this ());
-	connection->start_timeout ();
-	boost::asio::async_read (connection->socket, boost::asio::buffer (connection->receive_buffer.data (), 8 + sizeof (size_t)), [this_l](boost::system::error_code const & ec, size_t size_a) {
-		this_l->connection->stop_timeout ();
+	connection->socket->async_read (connection->receive_buffer, 8 + sizeof (size_t), [this_l](boost::system::error_code const & ec, size_t size_a) {
 		if (!ec)
 		{
-			rai::bufferstream stream (this_l->connection->receive_buffer.data () + 8, sizeof (size_t));
+			rai::bufferstream stream (this_l->connection->receive_buffer->data () + 8, sizeof (size_t));
 			size_t len_sc_info;
 			auto result = rai::read (stream, len_sc_info);
 			this_l->sc_msg.reserve (8 + sizeof (size_t));
-			this_l->sc_msg.assign (this_l->connection->receive_buffer.data (), this_l->connection->receive_buffer.data () + 8 + sizeof (size_t));
+			this_l->sc_msg.assign (this_l->connection->receive_buffer->data (), this_l->connection->receive_buffer->data () + 8 + sizeof (size_t));
 			if (!result)
 			{
 				this_l->sc_msg_transfer.clear ();
 				this_l->sc_msg_transfer.reserve (len_sc_info);
-				boost::asio::async_read (this_l->connection->socket, boost::asio::buffer (this_l->sc_msg_transfer.data (), len_sc_info), [this_l](boost::system::error_code const & ec_1, size_t size_b) {
+				auto buff (std::make_shared<std::vector<uint8_t>> (this_l->sc_msg_transfer));
+				this_l->connection->socket->async_read (buff, len_sc_info, [this_l](boost::system::error_code const & ec_1, size_t size_b) {
 					this_l->sc_msg.reserve (8 + sizeof (size_t) + size_b);
 					this_l->sc_msg.insert (this_l->sc_msg.end (), this_l->sc_msg_transfer.begin (), this_l->sc_msg_transfer.begin () + size_b);
 					this_l->receive_block (ec_1, size_b);
@@ -2556,14 +2547,12 @@ void rai::smart_contract_client::push_block (std::shared_ptr<rai::smart_contract
 		message.serialize (stream);
 	}
 	auto this_l (shared_from_this ());
-	connection->start_timeout ();
-	boost::asio::async_write (connection->socket, boost::asio::buffer (buffer->data (), buffer->size ()), [this_l, buffer](boost::system::error_code const & ec, size_t size_a) {
-		this_l->connection->stop_timeout ();
+	connection->socket->async_write (buffer, [this_l, buffer](boost::system::error_code const & ec, size_t size_a) {
 		if (!ec)
 		{
 			if (this_l->connection->node->config.logging.smart_contract_logging ())
 			{
-				BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("success push smart contract block to : %1%") % this_l->connection->socket.remote_endpoint ());
+				BOOST_LOG (this_l->connection->node->log) << boost::str (boost::format ("success push smart contract block to : %1%") % this_l->connection->socket->remote_endpoint ());
 			}
 			this_l->receive_smart_contract_ack ();
 		}
@@ -2580,11 +2569,8 @@ void rai::smart_contract_client::push_block (std::shared_ptr<rai::smart_contract
 void rai::smart_contract_client::receive_smart_contract_ack ()
 {
 	auto this_l (shared_from_this ());
-	connection->start_timeout ();
 	size_t size_l (8 + sizeof (uint8_t));
-	boost::asio::async_read (connection->socket, boost::asio::buffer (connection->receive_buffer.data (), size_l), [this_l, size_l](boost::system::error_code const & ec, size_t size_a) {
-		this_l->connection->stop_timeout ();
-
+	connection->socket->async_read (connection->receive_buffer, size_l, [this_l, size_l](boost::system::error_code const & ec, size_t size_a) {
 		if (size_a == size_l)
 		{
 			this_l->receive_smart_contract_ack (ec, size_a);
@@ -2605,7 +2591,7 @@ void rai::smart_contract_client::receive_smart_contract_ack (boost::system::erro
 	if (!ec)
 	{
 		assert (size_a == sizeof (uint8_t) + 8);
-		rai::bufferstream stream (connection->receive_buffer.data () + 8, sizeof (uint8_t));
+		rai::bufferstream stream (connection->receive_buffer->data () + 8, sizeof (uint8_t));
 		rai::smart_contract_result result;
 		auto error1 (rai::read (stream, result));
 		assert (!error1);
@@ -2627,7 +2613,7 @@ void rai::smart_contract_client::receive_smart_contract_ack (boost::system::erro
 			{
 				BOOST_LOG (connection->node->log) << boost::str (boost::format ("unknow result"));
 			}
-			BOOST_LOG (connection->node->log) << boost::str (boost::format ("Received  smart contract ack from %1%") % connection->socket.remote_endpoint ());
+			BOOST_LOG (connection->node->log) << boost::str (boost::format ("Received  smart contract ack from %1%") % connection->socket->remote_endpoint ());
 		}
 	}
 	else

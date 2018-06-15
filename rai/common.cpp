@@ -15,12 +15,12 @@
 // Genesis keys for network variants
 namespace
 {
-	char const * test_private_key_data = "34F0A37AAD20F4A260F0A5B3CB3D7FB50673212263E58A380BC10474BB039CE4";
-	char const * test_public_key_data = "B0311EA55708D6A53C75CDBF88300259C6D018522FE3D4D0A242E431F9E8B6D0"; // xrb_3e3j5tkog48pnny9dmfzj1r16pg8t1e76dz5tmac6iq689wyjfpiij4txtdo
-	char const * beta_public_key_data = "0311B25E0D1E1D7724BBA5BD523954F1DBCFC01CB8671D55ED2D32C7549FB252"; // xrb_11rjpbh1t9ixgwkdqbfxcawobwgusz13sg595ocytdbkrxcbzekkcqkc3dn1
-	//char const * live_public_key_data = "E89208DD038FBB269987689621D52292AE9C35941A7484756ECCED92A65093BA"; // xrb_3t6k35gi95xu6tergt6p69ck76ogmitsa8mnijtpxm9fkcm736xtoncuohr3
-	char const * live_public_key_data = "1327950B79C7A18C61C26965E274F38E0D8C618CDD72BA17E00E2F3655CE0B78";
-	char const * live_public_key_data_QN1 = "6F6B4BECCA470084032121E7923A668DA0BBC3AD1EF0C46513CDCF67080BC9B0";
+char const * test_private_key_data = "34F0A37AAD20F4A260F0A5B3CB3D7FB50673212263E58A380BC10474BB039CE4";
+char const * test_public_key_data = "B0311EA55708D6A53C75CDBF88300259C6D018522FE3D4D0A242E431F9E8B6D0"; // xrb_3e3j5tkog48pnny9dmfzj1r16pg8t1e76dz5tmac6iq689wyjfpiij4txtdo
+char const * beta_public_key_data = "0311B25E0D1E1D7724BBA5BD523954F1DBCFC01CB8671D55ED2D32C7549FB252"; // xrb_11rjpbh1t9ixgwkdqbfxcawobwgusz13sg595ocytdbkrxcbzekkcqkc3dn1
+//char const * live_public_key_data = "E89208DD038FBB269987689621D52292AE9C35941A7484756ECCED92A65093BA"; // xrb_3t6k35gi95xu6tergt6p69ck76ogmitsa8mnijtpxm9fkcm736xtoncuohr3
+char const * live_public_key_data = "1327950B79C7A18C61C26965E274F38E0D8C618CDD72BA17E00E2F3655CE0B78";
+char const * live_public_key_data_QN1 = "6F6B4BECCA470084032121E7923A668DA0BBC3AD1EF0C46513CDCF67080BC9B0";
 char const * test_genesis_data = R"%%%({
 	"type": "open",
 	"source": "B0311EA55708D6A53C75CDBF88300259C6D018522FE3D4D0A242E431F9E8B6D0",
@@ -99,7 +99,6 @@ char const * smart_contrac_block_genesis_data_QN1 = R"%%%({
     "work": "e4dcdd81ac0c507d"
 })%%%";
 
-
 class ledger_constants
 {
 public:
@@ -109,21 +108,21 @@ public:
 	rai_test_account (test_public_key_data),
 	rai_beta_account (beta_public_key_data),
 	rai_live_account (live_public_key_data),
-	rai_live_account_QN1(live_public_key_data_QN1),
+	rai_live_account_QN1 (live_public_key_data_QN1),
 	rai_test_genesis (test_genesis_data),
 	rai_beta_genesis (beta_genesis_data),
 	rai_live_genesis (live_genesis_data),
-	rai_live_genesis_QN1(live_genesis_data_QN1),
+	rai_live_genesis_QN1 (live_genesis_data_QN1),
 	chain_token_type ("3DA3D41A552B0135008A776EBBA7225E7773DBF867D86B9CD8FB650D6BAAD5DB"),
 	chain_token_type_QN1 ("E66E8CAD20394B3D7FA984D07CC500829AD36B69005E98F45348D98C37BF8EDC"),
 	genesis_account (rai::rai_network == rai::rai_networks::rai_test_network ? rai_test_account : rai::rai_network == rai::rai_networks::rai_beta_network ? rai_beta_account : rai_live_account),
-	genesis_account_QN1(rai_live_account_QN1),
+	genesis_account_QN1 (rai_live_account_QN1),
 	genesis_block (rai::rai_network == rai::rai_networks::rai_test_network ? rai_test_genesis : rai::rai_network == rai::rai_networks::rai_beta_network ? rai_beta_genesis : rai_live_genesis),
-	genesis_block_QN1(rai_live_genesis_QN1),
+	genesis_block_QN1 (rai_live_genesis_QN1),
 	genesis_smart_contract_block (smart_contrac_block_genesis_data), //QLINK
-	genesis_smart_contract_block_QN1(smart_contrac_block_genesis_data_QN1), //QLINK
-	genesis_amount(std::numeric_limits<rai::uint128_t>::max()),
-	genesis_amount_QN1(std::numeric_limits<rai::uint128_t>::max()),
+	genesis_smart_contract_block_QN1 (smart_contrac_block_genesis_data_QN1), //QLINK
+	genesis_amount (std::numeric_limits<rai::uint128_t>::max ()),
+	genesis_amount_QN1 (std::numeric_limits<rai::uint128_t>::max ()),
 	burn_account (0)
 	{
 		CryptoPP::AutoSeededRandomPool random_pool;
@@ -174,25 +173,25 @@ rai::keypair const & rai::test_genesis_key (globals.test_genesis_key);
 rai::account const & rai::rai_test_account (globals.rai_test_account);
 rai::account const & rai::rai_beta_account (globals.rai_beta_account);
 rai::account const & rai::rai_live_account (globals.rai_live_account);
-rai::account const & rai::rai_live_account_QN1(globals.rai_live_account_QN1);
+rai::account const & rai::rai_live_account_QN1 (globals.rai_live_account_QN1);
 std::string const & rai::rai_test_genesis (globals.rai_test_genesis);
 std::string const & rai::rai_beta_genesis (globals.rai_beta_genesis);
 std::string const & rai::rai_live_genesis (globals.rai_live_genesis);
-std::string const & rai::rai_live_genesis_QN1(globals.rai_live_genesis_QN1);
+std::string const & rai::rai_live_genesis_QN1 (globals.rai_live_genesis_QN1);
 
-rai::account const & rai::genesis_account(globals.genesis_account);
-rai::account const & rai::genesis_account_QN1(globals.genesis_account_QN1);
-std::string const & rai::genesis_block(globals.genesis_block);
-std::string const & rai::genesis_block_QN1(globals.genesis_block_QN1);
-rai::uint128_t const & rai::genesis_amount(globals.genesis_amount);
-rai::uint128_t const & rai::genesis_amount_QN1(globals.genesis_amount_QN1);
+rai::account const & rai::genesis_account (globals.genesis_account);
+rai::account const & rai::genesis_account_QN1 (globals.genesis_account_QN1);
+std::string const & rai::genesis_block (globals.genesis_block);
+std::string const & rai::genesis_block_QN1 (globals.genesis_block_QN1);
+rai::uint128_t const & rai::genesis_amount (globals.genesis_amount);
+rai::uint128_t const & rai::genesis_amount_QN1 (globals.genesis_amount_QN1);
 rai::block_hash const & rai::not_a_block (globals.not_a_block);
 rai::block_hash const & rai::not_an_account (globals.not_an_account);
-rai::account const & rai::burn_account(globals.burn_account);
-rai::block_hash const & rai::chain_token_type(globals.chain_token_type);
-rai::block_hash const & rai::chain_token_type_QN1(globals.chain_token_type_QN1);
-std::string const & rai::genesis_smart_contract_block(globals.genesis_smart_contract_block); //QLINK
-std::string const & rai::genesis_smart_contract_block_QN1(globals.genesis_smart_contract_block_QN1); //QLINK
+rai::account const & rai::burn_account (globals.burn_account);
+rai::block_hash const & rai::chain_token_type (globals.chain_token_type);
+rai::block_hash const & rai::chain_token_type_QN1 (globals.chain_token_type_QN1);
+std::string const & rai::genesis_smart_contract_block (globals.genesis_smart_contract_block); //QLINK
+std::string const & rai::genesis_smart_contract_block_QN1 (globals.genesis_smart_contract_block_QN1); //QLINK
 std::unordered_map<rai::block_hash, std::list<std::string>> rai::map_sc_info (globals.sc_infos.begin (), globals.sc_infos.end ());
 
 rai::votes::votes (std::shared_ptr<rai::block> block_a) :
@@ -367,7 +366,7 @@ send (0),
 receive (0),
 open (0),
 change (0),
-smart_contract (0)
+smart_contract (0),
 state (0)
 {
 }
@@ -721,8 +720,8 @@ void rai::amount_visitor::compute (rai::block_hash const & block_hash)
 
 void rai::amount_visitor::smart_contract_block (rai::smart_contract_block const & block_a)
 {
-	result = 0;
-	current = 0;
+	amount = 0;
+	current_amount = 0;
 }
 
 rai::balance_visitor::balance_visitor (MDB_txn * transaction_a, rai::block_store & store_a) :
@@ -783,8 +782,8 @@ void rai::balance_visitor::state_block (rai::state_block const & block_a)
 
 void rai::balance_visitor::smart_contract_block (rai::smart_contract_block const &)
 {
-	result = 0;
-	current = 0;
+	current_amount = 0;
+	current_amount = 0;
 }
 
 void rai::balance_visitor::compute (rai::block_hash const & block_hash)
@@ -1017,9 +1016,9 @@ rai::genesis_sc_block::genesis_sc_block ()
 void rai::genesis_sc_block::initialize (MDB_txn * transaction_a, rai::block_store & store_a) const
 {
 	auto hash_l (hash ());
-//	std::cout << hash_l.to_string () << std::endl;
-//	std::cout << sc_block->to_json ();
-//	assert (store_a.latest_begin (transaction_a) == store_a.latest_end ());
+	//	std::cout << hash_l.to_string () << std::endl;
+	//	std::cout << sc_block->to_json ();
+	//	assert (store_a.latest_begin (transaction_a) == store_a.latest_end ());
 	store_a.block_put (transaction_a, hash_l, *sc_block);
 }
 
@@ -1028,53 +1027,53 @@ rai::block_hash rai::genesis_sc_block::hash () const
 	return sc_block->hash ();
 }
 
-rai::genesis_QN1::genesis_QN1()
+rai::genesis_QN1::genesis_QN1 ()
 {
 	boost::property_tree::ptree tree;
-	std::stringstream istream(rai::genesis_block_QN1);
-	boost::property_tree::read_json(istream, tree);
-	auto block(rai::deserialize_block_json(tree));
+	std::stringstream istream (rai::genesis_block_QN1);
+	boost::property_tree::read_json (istream, tree);
+	auto block (rai::deserialize_block_json (tree));
 	//QLINK：更换创世区块为state block
-	assert(dynamic_cast<rai::state_block *> (block.get()) != nullptr);
-	state.reset(static_cast<rai::state_block *> (block.release()));
+	assert (dynamic_cast<rai::state_block *> (block.get ()) != nullptr);
+	state.reset (static_cast<rai::state_block *> (block.release ()));
 }
 
-void rai::genesis_QN1::initialize(MDB_txn * transaction_a, rai::block_store & store_a) const
+void rai::genesis_QN1::initialize (MDB_txn * transaction_a, rai::block_store & store_a) const
 {
-	auto hash_l(hash());
-//	assert(store_a.latest_begin(transaction_a) == store_a.latest_end());
-	store_a.block_put(transaction_a, hash_l, *state);
-	store_a.account_put(transaction_a, hash_l, { hash_l, hash_l, hash_l, std::numeric_limits<rai::uint128_t>::max(), rai::seconds_since_epoch(), 1, rai::chain_token_type_QN1, genesis_account_QN1 });
-	store_a.representation_put(transaction_a, genesis_account_QN1, std::numeric_limits<rai::uint128_t>::max());
-	store_a.checksum_put(transaction_a, 0, 0, hash_l);
-	store_a.frontier_put(transaction_a, hash_l, hash_l);
+	auto hash_l (hash ());
+	//	assert(store_a.latest_begin(transaction_a) == store_a.latest_end());
+	store_a.block_put (transaction_a, hash_l, *state);
+	store_a.account_put (transaction_a, hash_l, { hash_l, hash_l, hash_l, std::numeric_limits<rai::uint128_t>::max (), rai::seconds_since_epoch (), 1, rai::chain_token_type_QN1, genesis_account_QN1 });
+	store_a.representation_put (transaction_a, genesis_account_QN1, std::numeric_limits<rai::uint128_t>::max ());
+	store_a.checksum_put (transaction_a, 0, 0, hash_l);
+	store_a.frontier_put (transaction_a, hash_l, hash_l);
 }
 
-rai::block_hash rai::genesis_QN1::hash() const
+rai::block_hash rai::genesis_QN1::hash () const
 {
-	return state->hash();
+	return state->hash ();
 }
 
-rai::genesis_sc_block_QN1::genesis_sc_block_QN1()
+rai::genesis_sc_block_QN1::genesis_sc_block_QN1 ()
 {
 	boost::property_tree::ptree tree;
-	std::stringstream istream(rai::genesis_smart_contract_block_QN1);
-	boost::property_tree::read_json(istream, tree);
-	auto block(rai::deserialize_block_json(tree));
-	assert(dynamic_cast<rai::smart_contract_block *> (block.get()) != nullptr);
-	sc_block.reset(static_cast<rai::smart_contract_block *> (block.release()));
+	std::stringstream istream (rai::genesis_smart_contract_block_QN1);
+	boost::property_tree::read_json (istream, tree);
+	auto block (rai::deserialize_block_json (tree));
+	assert (dynamic_cast<rai::smart_contract_block *> (block.get ()) != nullptr);
+	sc_block.reset (static_cast<rai::smart_contract_block *> (block.release ()));
 }
 
-void rai::genesis_sc_block_QN1::initialize(MDB_txn * transaction_a, rai::block_store & store_a) const
+void rai::genesis_sc_block_QN1::initialize (MDB_txn * transaction_a, rai::block_store & store_a) const
 {
-	auto hash_l(hash());
-//	std::cout << hash_l.to_string() << std::endl;
-//	std::cout << sc_block->to_json();
-//	assert(store_a.latest_begin(transaction_a) == store_a.latest_end());
-	store_a.block_put(transaction_a, hash_l, *sc_block);
+	auto hash_l (hash ());
+	//	std::cout << hash_l.to_string() << std::endl;
+	//	std::cout << sc_block->to_json();
+	//	assert(store_a.latest_begin(transaction_a) == store_a.latest_end());
+	store_a.block_put (transaction_a, hash_l, *sc_block);
 }
 
-rai::block_hash rai::genesis_sc_block_QN1::hash() const
+rai::block_hash rai::genesis_sc_block_QN1::hash () const
 {
-	return sc_block->hash();
+	return sc_block->hash ();
 }

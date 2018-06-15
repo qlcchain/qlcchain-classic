@@ -1213,7 +1213,7 @@ smart_contract_button (new QPushButton ("Publish Smart Contract"))
 	//auto test (rai::get_sc_info_name (rai::chain_token_type));
 	//qDebug () << test.c_str ();
 
-	for ( auto it = rai::map_sc_info.begin(); it != rai::map_sc_info.end(); ++it )
+	for (auto it = rai::map_sc_info.begin (); it != rai::map_sc_info.end (); ++it)
 	{
 		auto name (rai::get_sc_info_name (it->first));
 		std::string token_hash;

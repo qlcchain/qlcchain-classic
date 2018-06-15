@@ -386,19 +386,16 @@ public:
 		assert (false);
 	}
 	// TODO: 实现
-	// AUTHOR: goreng
 	void smart_contract_req (rai::smart_contract_req const &) override
 	{
 		// 从相邻节点请求指定的 SC
 	}
 	// TODO: 实现
-	// AUTHOR: goreng
 	void smart_contract (rai::smart_contract_msg const &) override
 	{
 		// 发送客户端发布的智能合约到连接的节点
 	}
 	// TODO: 实现
-	// AUTHOR: goreng
 	void smart_contract_ack (rai::smart_contract_ack const &) override
 	{
 		// 处理对侧节点的校验结果
@@ -580,21 +577,21 @@ void rai::alarm::add (std::chrono::steady_clock::time_point const & wakeup_a, st
 	condition.notify_all ();
 }
 rai::logging::logging () :
-ledger_logging_value (true),
-ledger_duplicate_logging_value (true),
-vote_logging_value (true),
+ledger_logging_value (false),
+ledger_duplicate_logging_value (false),
+vote_logging_value (false),
 network_logging_value (true),
-network_message_logging_value (true),
-network_publish_logging_value (true),
-network_packet_logging_value (true),
-network_keepalive_logging_value (true),
-node_lifetime_tracing_value (true),
+network_message_logging_value (false),
+network_publish_logging_value (false),
+network_packet_logging_value (false),
+network_keepalive_logging_value (false),
+node_lifetime_tracing_value (false),
 insufficient_work_logging_value (true),
 log_rpc_value (true),
-bulk_pull_logging_value (true),
+bulk_pull_logging_value (false),
 smart_contract_logging_value (true),
 work_generation_time_value (true),
-log_to_cerr_value (true),
+log_to_cerr_value (false),
 max_size (16 * 1024 * 1024),
 rotation_size (4 * 1024 * 1024),
 flush (true)
@@ -1488,7 +1485,6 @@ rai::process_return rai::block_processor::process_receive_one (MDB_txn * transac
 			{
 				BOOST_LOG (node.log) << boost::str (boost::format ("Gap smart contract for: %1%") % hash.to_string ());
 			}
-			// FIXME: 调用 bootstrap 同步 smart contract block
 			if (auto state = dynamic_cast<rai::state_block *> (block_a.get ()))
 			{
 				node.store.unchecked_put (transaction_a, state->hashables.token_hash, block_a);
@@ -1721,13 +1717,13 @@ stats (config.stat_config)
 		{
 			// Store was empty meaning we just created it, add the genesis block
 			rai::genesis genesis;
-			genesis.initialize(transaction, store);
+			genesis.initialize (transaction, store);
 			rai::genesis_sc_block genesis_sc_block;
-			genesis_sc_block.initialize(transaction, store);
+			genesis_sc_block.initialize (transaction, store);
 			rai::genesis_QN1 genesis_QN1;
-			genesis_QN1.initialize(transaction, store);
+			genesis_QN1.initialize (transaction, store);
 			rai::genesis_sc_block_QN1 genesis_sc_block_QN1;
-			genesis_sc_block_QN1.initialize(transaction, store);
+			genesis_sc_block_QN1.initialize (transaction, store);
 		}
 	}
 	if (rai::rai_network == rai::rai_networks::rai_live_network)

@@ -8,7 +8,6 @@
 #include <unordered_map>
 
 #include <blake2/blake2.h>
-#include <boost/multi_index/hashed_index.hpp>
 
 namespace boost
 {
@@ -375,9 +374,9 @@ public:
 class genesis_QN1
 {
 public:
-	explicit genesis_QN1();
-	void initialize(MDB_txn *, rai::block_store &) const;
-	rai::block_hash hash() const;
+	explicit genesis_QN1 ();
+	void initialize (MDB_txn *, rai::block_store &) const;
+	rai::block_hash hash () const;
 	//QLINK:更换创世区块位state block
 	std::unique_ptr<rai::state_block> state;
 };
@@ -385,9 +384,9 @@ public:
 class genesis_sc_block_QN1
 {
 public:
-	explicit genesis_sc_block_QN1();
-	void initialize(MDB_txn *, rai::block_store &) const;
-	rai::block_hash hash() const;
+	explicit genesis_sc_block_QN1 ();
+	void initialize (MDB_txn *, rai::block_store &) const;
+	rai::block_hash hash () const;
 	std::unique_ptr<rai::smart_contract_block> sc_block;
 };
 }
