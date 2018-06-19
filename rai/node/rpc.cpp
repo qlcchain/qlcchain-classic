@@ -239,16 +239,16 @@ void rai::rpc_handler::account_balance ()
 		std::vector<rai::account_info> infos;
 		if (!node.store.accounts_get (transaction, account, infos))
 		{
-			for (rai::account_info info : infos)
+			for (const auto & info : infos)
 			{
 				boost::property_tree::ptree balance_l;
 				auto balance (node.balance_pending (info.open_block));
+				balance_l.put ("token", rai::get_sc_info_name (info.token_type));
 				balance_l.put ("balance", balance.first.convert_to<std::string> ());
 				balance_l.put ("pending", balance.second.convert_to<std::string> ());
 				balances.push_back (std::make_pair ("", balance_l));
 			}
 			response_l.add_child ("balances", balances);
-
 			response (response_l);
 		}
 		else
@@ -398,7 +398,7 @@ void rai::rpc_handler::account_info ()
 				}
 				if (pending)
 				{
-					auto account_pending (node.ledger.account_pending (transaction, account));
+					auto account_pending (node.ledger.account_pending (transaction, info.open_block));
 					info_l.put ("pending", account_pending.convert_to<std::string> ());
 				}
 				account_infos.push_back (std::make_pair ("", info_l));
@@ -649,43 +649,44 @@ void rai::rpc_handler::account_representative_set ()
 						}
 						if (work)
 						{
-							rai::transaction transaction (node.store.environment, nullptr, true);
-							rai::account_info info;
-							if (!node.store.accounts_get_first (transaction, account, info))
+							std::string token_text (request.get<std::string> ("token"));
+							rai::block_hash token_hash;
+							if (!find_token_hash (token_text, token_hash))
 							{
-								if (!rai::work_validate (info.head, work))
-								{
-									existing->second->store.work_put (transaction, account, work);
-								}
-								else
-								{
-									error_response (response, "Invalid work");
-								}
+								error_response (response, "Invalid token name");
 							}
 							else
 							{
-								error_response (response, "Account not found");
-							}
-						}
-						auto response_a (response);
-						std::vector<rai::account_info> infos;
-						rai::transaction transaction (node.store.environment, nullptr, false);
-						if (!node.store.accounts_get (transaction, account, infos))
-						{
-							boost::property_tree::ptree response_l;
-							for (auto & info : infos)
-							{
-								wallet->change_async (info.open_block, representative, [&response_l](std::shared_ptr<rai::block> block) {
-									rai::block_hash hash (0);
-									if (block != nullptr)
+								rai::transaction transaction (node.store.environment, nullptr, true);
+								rai::account_info info;
+								if (!node.store.accounts_get (transaction, account, token_hash, info))
+								{
+									if (!rai::work_validate (info.head, work))
 									{
-										hash = block->hash ();
+										existing->second->store.work_put (transaction, account, work);
+										auto response_a (response);
+										wallet->change_async (info.open_block, representative, [&response_a](std::shared_ptr<rai::block> block) {
+											rai::block_hash hash (0);
+											if (block != nullptr)
+											{
+												hash = block->hash ();
+											}
+											boost::property_tree::ptree response_l;
+											response_l.put ("block", hash.to_string ());
+											response_a (response_l);
+										},
+										work == 0);
 									}
-									response_l.put ("block", hash.to_string ());
-								},
-								work == 0);
+									else
+									{
+										error_response (response, "Invalid work");
+									}
+								}
+								else
+								{
+									error_response (response, "Account not found");
+								}
 							}
-							response_a (response_l);
 						}
 					}
 				}
@@ -742,7 +743,7 @@ void rai::rpc_handler::accounts_balances ()
 					entry.put ("account", account.to_account ());
 					entry.put ("balance", balance.first.convert_to<std::string> ());
 					entry.put ("pending", balance.second.convert_to<std::string> ());
-					entry.put ("token", info.token_type.to_string ());
+					entry.put ("token", rai::get_sc_info_name (info.token_type));
 					balances.push_back (std::make_pair (account.to_account (), entry));
 				}
 			}
@@ -831,7 +832,7 @@ void rai::rpc_handler::accounts_frontiers ()
 					auto latest (node.ledger.latest (transaction, info.open_block));
 					if (!latest.is_zero ())
 					{
-						token_frontiers.put (info.open_block.to_account (), latest.to_string ());
+						token_frontiers.put (info.open_block.to_string (), latest.to_string ());
 					}
 				}
 				frontiers.add_child (account.to_account (), token_frontiers);
@@ -902,7 +903,7 @@ void rai::rpc_handler::accounts_pending ()
 								if (source)
 								{
 									boost::property_tree::ptree pending_tree;
-									pending_tree.put ("token", info.token_type.to_string ());
+									pending_tree.put ("token", rai::get_sc_info_name (info.token_type));
 									pending_tree.put ("amount", info.amount.number ().convert_to<std::string> ());
 									pending_tree.put ("source", info.source.to_account ());
 									peers_l.add_child (key.hash.to_string (), pending_tree);
@@ -931,10 +932,10 @@ void rai::rpc_handler::accounts_pending ()
 void rai::rpc_handler::available_supply ()
 {
 	auto genesis_balance (node.balance (rai::genesis_account)); // Cold storage genesis
-	auto landing_balance (node.balance (rai::account ("059F68AAB29DE0D3A27443625C7EA9CDDB6517A8B76FE37727EF6A4D76832AD5"))); // Active unavailable account
-	auto faucet_balance (node.balance (rai::account ("8E319CE6F3025E5B2DF66DA7AB1467FE48F1679C13DD43BFDB29FA2E9FC40D3B"))); // Faucet account
+	//	auto landing_balance (node.balance (rai::account ("059F68AAB29DE0D3A27443625C7EA9CDDB6517A8B76FE37727EF6A4D76832AD5"))); // Active unavailable account
+	//	auto faucet_balance (node.balance (rai::account ("8E319CE6F3025E5B2DF66DA7AB1467FE48F1679C13DD43BFDB29FA2E9FC40D3B"))); // Faucet account
 	auto burned_balance ((node.balance_pending (rai::account (0))).second); // Burning 0 account
-	auto available (rai::genesis_amount - genesis_balance - landing_balance - faucet_balance - burned_balance);
+	auto available (rai::genesis_amount - genesis_balance);
 	boost::property_tree::ptree response_l;
 	response_l.put ("available", available.convert_to<std::string> ());
 	response (response_l);
@@ -1950,6 +1951,13 @@ void rai::rpc_handler::account_history ()
 	rai::block_hash token_hash;
 	auto head_str (request.get_optional<std::string> ("head"));
 	rai::transaction transaction (node.store.environment, nullptr, false);
+	error = find_token_hash (token_text, token_hash);
+	if (!error)
+	{
+		error_response (response, "Invalid token name");
+		return;
+	}
+
 	if (head_str)
 	{
 		error = hash.decode_hex (*head_str);
@@ -1969,20 +1977,10 @@ void rai::rpc_handler::account_history ()
 		error = account.decode_account (account_text);
 		if (!error)
 		{
-			// 获取指定 token 的 account_info
-			error = token_hash.decode_account (token_text);
-			if (error)
+			rai::account_info info;
+			if (!node.store.accounts_get (transaction, account, token_hash, info))
 			{
-				error_response (response, "Bad account number");
-			}
-			else
-			{
-				rai::account_info info;
-				if (!node.store.accounts_get (transaction, account, token_hash, info))
-				{
-					account = info.open_block;
-					hash = node.ledger.latest (transaction, info.open_block);
-				}
+				hash = node.ledger.latest (transaction, info.open_block);
 			}
 		}
 		else
@@ -3565,7 +3563,7 @@ void rai::rpc_handler::version ()
 	boost::property_tree::ptree response_l;
 	response_l.put ("rpc_version", "1");
 	response_l.put ("store_version", std::to_string (node.store_version ()));
-	response_l.put ("node_vendor", boost::str (boost::format ("RaiBlocks %1%.%2%") % RAIBLOCKS_VERSION_MAJOR % RAIBLOCKS_VERSION_MINOR));
+	response_l.put ("node_vendor", boost::str (boost::format ("QLCChain %1%.%2%") % RAIBLOCKS_VERSION_MAJOR % RAIBLOCKS_VERSION_MINOR));
 	response (response_l);
 }
 
@@ -4722,6 +4720,21 @@ void rai::rpc_handler::assets_issuer ()
 
 void rai::rpc_handler::smart_contract_invoke_script ()
 {
+}
+
+bool rai::rpc_handler::find_token_hash (std::string const token_name, rai::block_hash & token_hash)
+{
+	auto result (false);
+	auto it = std::find_if (rai::map_sc_info.begin (), rai::map_sc_info.end (), [token_name](std::pair<rai::block_hash, std::list<std::string>> const & item) {
+		return std::find (std::begin (item.second), std::end (item.second), token_name) != std::end (item.second);
+	});
+
+	if (it != rai::map_sc_info.end ())
+	{
+		token_hash = it->first;
+		result = true;
+	}
+	return result;
 }
 
 void rai::rpc_handler::smart_contract_block ()

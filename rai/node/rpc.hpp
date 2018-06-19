@@ -370,6 +370,9 @@ public:
 	rai::rpc & rpc;
 	boost::property_tree::ptree request;
 	std::function<void(boost::property_tree::ptree const &)> response;
+
+private:
+	bool find_token_hash (std::string const, rai::block_hash &);
 };
 /** Returns the correct RPC implementation based on TLS configuration */
 std::unique_ptr<rai::rpc> get_rpc (boost::asio::io_service & service_a, rai::node & node_a, rai::rpc_config const & config_a);

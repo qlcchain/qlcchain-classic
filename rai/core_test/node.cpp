@@ -1007,7 +1007,7 @@ TEST (node, fork_no_vote_quorum)
 	ASSERT_EQ (node1.config.receive_minimum.number (), node1.weight (key1));
 	ASSERT_EQ (node1.config.receive_minimum.number (), node2.weight (key1));
 	ASSERT_EQ (node1.config.receive_minimum.number (), node3.weight (key1));
-	rai::state_block send1 (rai::test_genesis_key.pub, block->hash (), rai::test_genesis_key.pub, (rai::genesis_amount / 4) - (node1.config.receive_minimum.number () * 2), key1, rai::test_genesis_key.prv, rai::test_genesis_key.pub, system.work.generate (block->hash ()));
+	rai::state_block send1 (rai::test_genesis_key.pub, block->hash (), rai::test_genesis_key.pub, (rai::genesis_amount / 4) - (node1.config.receive_minimum.number () * 2), key1, rai::chain_token_type, rai::test_genesis_key.prv, rai::test_genesis_key.pub, system.work.generate (block->hash ()));
 	ASSERT_EQ (rai::process_result::progress, node1.process (send1).code);
 	ASSERT_EQ (rai::process_result::progress, node2.process (send1).code);
 	ASSERT_EQ (rai::process_result::progress, node3.process (send1).code);
@@ -1053,7 +1053,7 @@ TEST (node, fork_pre_confirm)
 		system.wallet (2)->store.representative_set (transaction, key2.pub);
 	}
 	auto iterations (0);
-	auto block0 (system.wallet (0)->send_action (rai::test_genesis_key.pub, key1.pub, rai::genesis_amount / 3));
+	auto block0 (system.wallet (0)->send_action (rai::test_genesis_key.pub, key1.pub, rai::chain_token_type, rai::genesis_amount / 3));
 	ASSERT_NE (nullptr, block0);
 	while (node0.balance (key1.pub) == 0)
 	{
@@ -1061,7 +1061,7 @@ TEST (node, fork_pre_confirm)
 		++iterations;
 		ASSERT_LT (iterations, 400);
 	}
-	auto block1 (system.wallet (0)->send_action (rai::test_genesis_key.pub, key2.pub, rai::genesis_amount / 3));
+	auto block1 (system.wallet (0)->send_action (rai::test_genesis_key.pub, key2.pub, rai::chain_token_type, rai::genesis_amount / 3));
 	ASSERT_NE (nullptr, block1);
 	while (node0.balance (key2.pub) == 0)
 	{
@@ -1071,8 +1071,8 @@ TEST (node, fork_pre_confirm)
 	}
 	rai::keypair key3;
 	rai::keypair key4;
-	auto block2 (std::make_shared<rai::state_block> (rai::test_genesis_key.pub, node0.latest (rai::test_genesis_key.pub), key3.pub, node0.balance (rai::test_genesis_key.pub), 0, rai::test_genesis_key.prv, rai::test_genesis_key.pub, 0));
-	auto block3 (std::make_shared<rai::state_block> (rai::test_genesis_key.pub, node0.latest (rai::test_genesis_key.pub), key4.pub, node0.balance (rai::test_genesis_key.pub), 0, rai::test_genesis_key.prv, rai::test_genesis_key.pub, 0));
+	auto block2 (std::make_shared<rai::state_block> (rai::test_genesis_key.pub, node0.latest (rai::test_genesis_key.pub), key3.pub, node0.balance (rai::test_genesis_key.pub), 0, rai::chain_token_type, rai::test_genesis_key.prv, rai::test_genesis_key.pub, 0));
+	auto block3 (std::make_shared<rai::state_block> (rai::test_genesis_key.pub, node0.latest (rai::test_genesis_key.pub), key4.pub, node0.balance (rai::test_genesis_key.pub), 0, rai::chain_token_type, rai::test_genesis_key.prv, rai::test_genesis_key.pub, 0));
 	node0.work_generate_blocking (*block2);
 	node0.work_generate_blocking (*block3);
 	node0.process_active (block2);
