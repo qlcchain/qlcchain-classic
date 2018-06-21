@@ -15,19 +15,24 @@
 // Genesis keys for network variants
 namespace
 {
-char const * test_private_key_data = "34F0A37AAD20F4A260F0A5B3CB3D7FB50673212263E58A380BC10474BB039CE4";
-char const * test_public_key_data = "B0311EA55708D6A53C75CDBF88300259C6D018522FE3D4D0A242E431F9E8B6D0"; // xrb_3e3j5tkog48pnny9dmfzj1r16pg8t1e76dz5tmac6iq689wyjfpiij4txtdo
+char const * test_private_key_data = "69AF95E5AD27F7DCEBBECFBFF7C05194F4E6678C8A6915FA87AD6DC46F45EDD9";
+char const * test_public_key_data = "B3DEFADF674A687DC0D4EF3EEF7B5A0E177BAE0D9887B562E2F234148D3682B3"; // xrb_3e3j5tkog48pnny9dmfzj1r16pg8t1e76dz5tmac6iq689wyjfpiij4txtdo
 char const * beta_public_key_data = "0311B25E0D1E1D7724BBA5BD523954F1DBCFC01CB8671D55ED2D32C7549FB252"; // xrb_11rjpbh1t9ixgwkdqbfxcawobwgusz13sg595ocytdbkrxcbzekkcqkc3dn1
 //char const * live_public_key_data = "E89208DD038FBB269987689621D52292AE9C35941A7484756ECCED92A65093BA"; // xrb_3t6k35gi95xu6tergt6p69ck76ogmitsa8mnijtpxm9fkcm736xtoncuohr3
 char const * live_public_key_data = "1327950B79C7A18C61C26965E274F38E0D8C618CDD72BA17E00E2F3655CE0B78";
 char const * live_public_key_data_QN1 = "6F6B4BECCA470084032121E7923A668DA0BBC3AD1EF0C46513CDCF67080BC9B0";
 char const * test_genesis_data = R"%%%({
-	"type": "open",
-	"source": "B0311EA55708D6A53C75CDBF88300259C6D018522FE3D4D0A242E431F9E8B6D0",
-	"representative": "xrb_3e3j5tkog48pnny9dmfzj1r16pg8t1e76dz5tmac6iq689wyjfpiij4txtdo",
-	"account": "xrb_3e3j5tkog48pnny9dmfzj1r16pg8t1e76dz5tmac6iq689wyjfpiij4txtdo",
-	"work": "9680625b39d3363d",
-	"signature": "ECDA914373A2F0CA1296475BAEE40500A7F0A7AD72A5A80C81D7FAB7F6C802B2CC7DB50F5DD0FB25B2EF11761FA7344A158DD5A700B21BD47DE5BD0F63153A02"
+	"type": "state",
+	"account": "qlc_3eyyzdhpgkmahq1fbusyxxxon5iqhgq1u869pojg7wjn4k8mf1omyi3ab6nq",
+	"previous": "0000000000000000000000000000000000000000000000000000000000000000",
+	"representative": "qlc_3eyyzdhpgkmahq1fbusyxxxon5iqhgq1u869pojg7wjn4k8mf1omyi3ab6nq",
+	"balance": "340282366920938463463374607431768211455",
+	"link": "B3DEFADF674A687DC0D4EF3EEF7B5A0E177BAE0D9887B562E2F234148D3682B3",
+	"link_as_account": "qlc_3eyyzdhpgkmahq1fbusyxxxon5iqhgq1u869pojg7wjn4k8mf1omyi3ab6nq",
+	"token": "3DA3D41A552B0135008A776EBBA7225E7773DBF867D86B9CD8FB650D6BAAD5DB",
+	"Token_name": "Root_Token",
+	"signature": "EF245C9BB426EB7574102EB11727AF760C4CB942D6864857BDAC7F2D28B344B1E2795E99B1509F49602AF54E7617EF4907AF47B2592870C62713947D3ADD4A0E",
+	"work": "2b61e26528833017"
 })%%%";
 
 char const * beta_genesis_data = R"%%%({
