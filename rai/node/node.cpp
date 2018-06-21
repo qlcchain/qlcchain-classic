@@ -2118,16 +2118,16 @@ void rai::node::keepalive_preconfigured (std::vector<std::string> const & peers_
 	}
 }
 
-rai::block_hash rai::node::latest (rai::account const & account_a)
+rai::block_hash rai::node::latest (rai::account const & account_a, rai::block_hash const & token_hash_a)
 {
 	rai::transaction transaction (store.environment, nullptr, false);
-	return ledger.latest (transaction, account_a);
+	return ledger.latest (transaction, account_a, token_hash_a);
 }
 
-rai::uint128_t rai::node::balance (rai::account const & account_a)
+rai::uint128_t rai::node::balance (rai::account const & account_a, rai::block_hash const & token_hash_a)
 {
 	rai::transaction transaction (store.environment, nullptr, false);
-	return ledger.account_balance (transaction, account_a);
+	return ledger.account_balance (transaction, account_a, token_hash_a);
 }
 
 std::unique_ptr<rai::block> rai::node::block (rai::block_hash const & hash_a)
@@ -2136,7 +2136,7 @@ std::unique_ptr<rai::block> rai::node::block (rai::block_hash const & hash_a)
 	return store.block_get (transaction, hash_a);
 }
 
-std::pair<rai::uint128_t, rai::uint128_t> rai::node::balance_pending (rai::account const & account_a)
+std::pair<rai::uint128_t, rai::uint128_t> rai::node::balance_pending (rai::account const & account_a, rai::block_hash const & token_hash_a)
 {
 	std::pair<rai::uint128_t, rai::uint128_t> result;
 	rai::transaction transaction (store.environment, nullptr, false);

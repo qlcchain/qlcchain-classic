@@ -22,16 +22,15 @@ public:
 	// Map of weight -> associated block, ordered greatest to least
 	rai::tally_t tally (MDB_txn *, rai::votes const &);
 	rai::account account (MDB_txn *, rai::block_hash const &);
+	rai::account token_account (MDB_txn *, rai::block_hash const &);
 	rai::uint128_t amount (MDB_txn *, rai::block_hash const &);
 	rai::uint128_t balance (MDB_txn *, rai::block_hash const &);
-	rai::uint128_t account_balance (MDB_txn *, rai::account const &);
-	rai::uint128_t account_pending (MDB_txn *, rai::account const &);
-	rai::uint128_t accounts_balance (MDB_txn *, rai::account const &, rai::account const &);
-	rai::uint128_t accounts_pending (MDB_txn *, rai::account const &, rai::account const &);
+	rai::uint128_t account_balance (MDB_txn *, rai::account const &, rai::block_hash const & = rai::chain_token_type);
+	rai::uint128_t account_pending (MDB_txn *, rai::account const &, rai::block_hash const & = rai::chain_token_type);
 	rai::uint128_t weight (MDB_txn *, rai::account const &);
 	std::unique_ptr<rai::block> successor (MDB_txn *, rai::block_hash const &);
 	std::unique_ptr<rai::block> forked_block (MDB_txn *, rai::block const &);
-	rai::block_hash latest (MDB_txn *, rai::account const &);
+	rai::block_hash latest (MDB_txn *, rai::account const &, rai::block_hash const & = rai::chain_token_type);
 	rai::block_hash latest_root (MDB_txn *, rai::account const &);
 	rai::block_hash representative (MDB_txn *, rai::block_hash const &);
 	rai::block_hash representative_calculated (MDB_txn *, rai::block_hash const &);

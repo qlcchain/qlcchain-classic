@@ -117,7 +117,7 @@ void rai_qt::self_pane::refresh_balance ()
 		// balance to string
 		for (auto & info : infos)
 		{
-			auto balance (wallet.node.balance_pending (info.open_block));
+			auto balance (wallet.node.balance_pending (info.account, info.token_type));
 			final_text += get_sc_info_name (info.token_type) + " -> Balance: " + wallet.format_balance (balance.first, info.token_type);
 			if (!balance.second.is_zero ())
 			{
@@ -277,9 +277,9 @@ void rai_qt::accounts::refresh_wallet_balance ()
 			for (auto & info : infos)
 			{
 				auto token_type (info.token_type);
-				auto token_account (info.open_block);
-				balance = this->wallet.node.ledger.account_balance (transaction, token_account);
-				pending = this->wallet.node.ledger.account_pending (transaction, token_account);
+				auto account (info.account);
+				balance = this->wallet.node.ledger.account_balance (transaction, account, token_type);
+				pending = this->wallet.node.ledger.account_pending (transaction, account, token_type);
 				if (balances.find (token_type) != balances.end ())
 				{
 					balances[token_type].first += balance;
@@ -323,7 +323,7 @@ void rai_qt::accounts::refresh ()
 		{
 			rai::account_info info;
 			wallet.node.store.accounts_get (transaction, key, entry->first, info);
-			auto balance_amount (wallet.node.ledger.account_balance (transaction, info.open_block));
+			auto balance_amount (wallet.node.ledger.account_balance (transaction, info.account, info.token_type));
 			bool display (true);
 			switch (wallet.wallet_m->store.key_type (i->second))
 			{
@@ -628,7 +628,7 @@ void rai_qt::history::refresh ()
 
 	for (auto & info : infos)
 	{
-		auto hash (ledger.latest (transaction, info.open_block));
+		auto hash (ledger.latest (transaction, info.account, info.token_type));
 		short_text_visitor visitor (transaction, ledger);
 		for (auto i (0), n (tx_count->value ()); i < n && !hash.is_zero (); ++i)
 		{
@@ -786,8 +786,7 @@ wallet (wallet_a)
 			std::string final_text ("");
 			for (const auto & info : infos)
 			{
-				// FIXME: fix UI text
-				auto balance (this->wallet.node.balance_pending (info.open_block));
+				auto balance (this->wallet.node.balance_pending (info.account, info.token_type));
 				final_text += (std::string ("Balance : ") + wallet.format_balance (balance.first, info.token_type));
 				if (!balance.second.is_zero ())
 				{
@@ -1463,26 +1462,20 @@ void rai_qt::wallet::start ()
 			this_l->push_main_stack (this_l->send_blocks_window);
 		}
 	});
-	node.observers.blocks.add ([this_w](std::shared_ptr<rai::block> block_a, rai::account const & token_account_a, rai::uint128_t const & amount_a, bool) {
+	node.observers.blocks.add ([this_w](std::shared_ptr<rai::block> block_a, rai::account const & account_a, rai::uint128_t const & amount_a, bool) {
 		if (auto this_l = this_w.lock ())
 		{
-			this_l->application.postEvent (&this_l->processor, new eventloop_event ([this_w, block_a, token_account_a]() {
+			this_l->application.postEvent (&this_l->processor, new eventloop_event ([this_w, block_a, account_a]() {
 				if (auto this_l = this_w.lock ())
 				{
-					rai::transaction transaction (this_l->wallet_m->node.store.environment, nullptr, false);
-					rai::account_info info;
-					auto error (this_l->wallet_m->node.store.account_get (transaction, token_account_a, info));
-					if (!error)
+					auto account (info.account);
+					if (this_l->wallet_m->exists (account))
 					{
-						auto account (info.account);
-						if (this_l->wallet_m->exists (account))
-						{
-							this_l->accounts.refresh ();
-						}
-						if (account == this_l->account)
-						{
-							this_l->history.refresh ();
-						}
+						this_l->accounts.refresh ();
+					}
+					if (account == this_l->account)
+					{
+						this_l->history.refresh ();
 					}
 				}
 			}));

@@ -242,7 +242,7 @@ void rai::rpc_handler::account_balance ()
 			for (const auto & info : infos)
 			{
 				boost::property_tree::ptree balance_l;
-				auto balance (node.balance_pending (info.open_block));
+				auto balance (node.balance_pending (info.account, info.token_type));
 				balance_l.put ("token", rai::get_sc_info_name (info.token_type));
 				balance_l.put ("balance", balance.first.convert_to<std::string> ());
 				balance_l.put ("pending", balance.second.convert_to<std::string> ());
@@ -739,7 +739,7 @@ void rai::rpc_handler::accounts_balances ()
 				for (auto & info : infos)
 				{
 					boost::property_tree::ptree entry;
-					auto balance (node.balance_pending (info.open_block));
+					auto balance (node.balance_pending (info.account, info.token_type));
 					entry.put ("account", account.to_account ());
 					entry.put ("balance", balance.first.convert_to<std::string> ());
 					entry.put ("pending", balance.second.convert_to<std::string> ());
@@ -829,10 +829,9 @@ void rai::rpc_handler::accounts_frontiers ()
 				boost::property_tree::ptree token_frontiers;
 				for (auto & info : infos)
 				{
-					auto latest (node.ledger.latest (transaction, info.open_block));
-					if (!latest.is_zero ())
+					if (!info.head.is_zero ())
 					{
-						token_frontiers.put (info.open_block.to_string (), latest.to_string ());
+						token_frontiers.put (info.open_block.to_string (), info.head.to_string ());
 					}
 				}
 				frontiers.add_child (account.to_account (), token_frontiers);
@@ -1148,6 +1147,7 @@ void rai::rpc_handler::block_count_type ()
 	response (response_l);
 }
 
+// FIXME: TOKEN_TYPE
 void rai::rpc_handler::block_create ()
 {
 	if (rpc.config.enable_control)
@@ -1781,9 +1781,24 @@ void rai::rpc_handler::frontiers ()
 			boost::property_tree::ptree response_l;
 			boost::property_tree::ptree frontiers;
 			rai::transaction transaction (node.store.environment, nullptr, false);
-			for (auto i (node.store.latest_begin (transaction, start)), n (node.store.latest_end ()); i != n && frontiers.size () < count; ++i)
+			for (auto i (node.store.account_latest_begin (transaction, start)), n (node.store.latest_end ()); i != n && frontiers.size () < count; ++i)
 			{
-				frontiers.put (rai::account (i->first.uint256 ()).to_account (), rai::account_info (i->second).head.to_string ());
+				boost::property_tree::ptree token_frontiers;
+				rai::account account (i->first.uint256 ());
+				std::vector<rai::account_info> infos;
+				if (!node.store.accounts_get (transaction, account, infos))
+				{
+					boost::property_tree::ptree token_frontier;
+					for (auto & info : infos)
+					{
+						auto latest (info.head);
+						if (!latest.is_zero ())
+						{
+							token_frontier.put (info.open_block.to_string (), latest.to_string ());
+						}
+					}
+					frontiers.add_child (account.to_account (), token_frontier);
+				}
 			}
 			response_l.add_child ("frontiers", frontiers);
 			response (response_l);
@@ -1980,7 +1995,7 @@ void rai::rpc_handler::account_history ()
 			rai::account_info info;
 			if (!node.store.accounts_get (transaction, account, token_hash, info))
 			{
-				hash = node.ledger.latest (transaction, info.open_block);
+				hash = node.ledger.latest (transaction, info.account, info.token_type);
 			}
 		}
 		else
@@ -2148,7 +2163,7 @@ void rai::rpc_handler::ledger ()
 		rai::transaction transaction (node.store.environment, nullptr, false);
 		if (!sorting) // Simple
 		{
-			for (auto i (node.store.latest_begin (transaction, start)), n (node.store.latest_end ()); i != n && accounts.size () < count; ++i)
+			for (auto i (node.store.account_latest_begin (transaction, start)), n (node.store.latest_end ()); i != n && accounts.size () < count; ++i)
 			{
 				rai::account_info info (i->second);
 				if (info.modified >= modified_since)
@@ -2186,7 +2201,7 @@ void rai::rpc_handler::ledger ()
 		else // Sorting
 		{
 			std::vector<std::pair<rai::uint128_union, rai::account>> ledger_l;
-			for (auto i (node.store.latest_begin (transaction, start)), n (node.store.latest_end ()); i != n; ++i)
+			for (auto i (node.store.account_latest_begin (transaction, start)), n (node.store.latest_end ()); i != n; ++i)
 			{
 				rai::account_info info (i->second);
 				rai::uint128_union balance (info.balance);
@@ -3171,8 +3186,11 @@ void rai::rpc_handler::republish ()
 				boost::property_tree::ptree entry;
 				entry.put ("", hash.to_string ());
 				blocks.push_back (std::make_pair ("", entry));
-				if (destinations != 0) // Republish destination chain
+
+				if (destinations != 0 && dynamic_cast<rai::state_block *> (block.get ()) != nullptr) // Republish destination chain
 				{
+					rai::state_block const * state_block (dynamic_cast<rai::state_block const *> (block.get ()));
+					auto token_type = state_block->token_type ();
 					auto block_b (node.store.block_get (transaction, hash));
 					auto destination (node.ledger.block_destination (transaction, *block_b));
 					if (!destination.is_zero ())
@@ -3281,10 +3299,12 @@ void rai::rpc_handler::send ()
 			if (existing != node.wallets.items.end ())
 			{
 				std::string token_text (request.get<std::string> ("token"));
-				rai::block_hash token;
-				if (token.decode_hex (token_text))
+				rai::block_hash token_hash;
+				error = find_token_hash (token_text, token_hash);
+				if (!error)
 				{
-					error_response (response, "Bad token hash.");
+					error_response (response, "Invalid token name");
+					return;
 				}
 				std::string source_text (request.get<std::string> ("source"));
 				rai::account source;
@@ -3316,7 +3336,7 @@ void rai::rpc_handler::send ()
 							{
 								rai::transaction transaction (node.store.environment, nullptr, work != 0); // false if no "work" in request, true if work > 0
 								rai::account_info info;
-								if (!node.store.account_get (transaction, source, info))
+								if (!node.store.accounts_get (transaction, source, token_hash, info))
 								{
 									balance = (info.balance).number ();
 								}
@@ -3345,7 +3365,7 @@ void rai::rpc_handler::send ()
 								{
 									auto rpc_l (shared_from_this ());
 									auto response_a (response);
-									existing->second->send_async (source, destination, token, amount.number (), [response_a](std::shared_ptr<rai::block> block_a) {
+									existing->second->send_async (source, destination, token_hash, amount.number (), [response_a](std::shared_ptr<rai::block> block_a) {
 										if (block_a != nullptr)
 										{
 											rai::uint256_union hash (block_a->hash ());
@@ -3967,11 +3987,18 @@ void rai::rpc_handler::wallet_frontiers ()
 			for (auto i (existing->second->store.begin (transaction)), n (existing->second->store.end ()); i != n; ++i)
 			{
 				rai::account account (i->first.uint256 ());
-				auto latest (node.ledger.latest (transaction, account));
-				if (!latest.is_zero ())
+				boost::property_tree::ptree token_frontiers;
+				for (auto entry = rai::map_sc_info.begin (); entry != rai::map_sc_info.end (); ++entry)
 				{
-					frontiers.put (account.to_account (), latest.to_string ());
+					rai::account_info info;
+					node.store.accounts_get (transaction, account, entry->first, info);
+					auto latest (node.ledger.latest (transaction, account, info.token_type));
+					if (!latest.is_zero ())
+					{
+						token_frontiers.put (info.open_block.to_string (), latest.to_string ());
+					}
 				}
+				frontiers.add_child (account.to_account (), token_frontiers);
 			}
 			response_l.add_child ("frontiers", frontiers);
 			response (response_l);

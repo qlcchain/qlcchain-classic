@@ -82,7 +82,7 @@ public:
 	{
 		auto hash (block_a.hash ());
 		auto representative (ledger.representative (transaction, block_a.hashables.previous));
-		auto account (ledger.account (transaction, block_a.hashables.previous));
+		auto account (ledger.token_account (transaction, block_a.hashables.previous));
 		rai::account_info info;
 		auto error (ledger.store.account_get (transaction, account, info));
 		assert (!error);
@@ -123,7 +123,7 @@ public:
 			rai::pending_key key (block_a.hashables.link, hash);
 			while (!ledger.store.pending_exists (transaction, key))
 			{
-				ledger.rollback (transaction, ledger.latest (transaction, block_a.hashables.link));
+				ledger.rollback (transaction, ledger.latest (transaction, block_a.hashables.link, block_a.token_type ()));
 			}
 			ledger.store.pending_del (transaction, key);
 			ledger.stats.inc (rai::stat::type::rollback, rai::stat::detail::send);
@@ -607,12 +607,11 @@ rai::uint128_t rai::ledger::balance (MDB_txn * transaction_a, rai::block_hash co
 }
 
 // Balance for an account by account number
-// FIXME:
-rai::uint128_t rai::ledger::account_balance (MDB_txn * transaction_a, rai::account const & account_a)
+rai::uint128_t rai::ledger::account_balance (MDB_txn * transaction_a, rai::account const & account_a, rai::block_hash const & token_hash_a)
 {
 	rai::uint128_t result (0);
 	rai::account_info info;
-	auto none (store.account_get (transaction_a, account_a, info));
+	auto none (store.accounts_get (transaction_a, account_a, token_hash_a, info));
 	if (!none)
 	{
 		result = info.balance.number ();
@@ -620,15 +619,17 @@ rai::uint128_t rai::ledger::account_balance (MDB_txn * transaction_a, rai::accou
 	return result;
 }
 
-// FIXME:
-rai::uint128_t rai::ledger::account_pending (MDB_txn * transaction_a, rai::account const & account_a)
+rai::uint128_t rai::ledger::account_pending (MDB_txn * transaction_a, rai::account const & account_a, rai::block_hash const & token_hash_a)
 {
 	rai::uint128_t result (0);
 	rai::account end (account_a.number () + 1);
 	for (auto i (store.pending_begin (transaction_a, rai::pending_key (account_a, 0))), n (store.pending_begin (transaction_a, rai::pending_key (end, 0))); i != n; ++i)
 	{
 		rai::pending_info info (i->second);
-		result += info.amount.number ();
+		if (info.token_type == token_hash_a)
+		{
+			result += info.amount.number ();
+		}
 	}
 	return result;
 }
@@ -747,7 +748,7 @@ rai::uint128_t rai::ledger::weight (MDB_txn * transaction_a, rai::account const 
 void rai::ledger::rollback (MDB_txn * transaction_a, rai::block_hash const & block_a)
 {
 	assert (store.block_exists (transaction_a, block_a));
-	auto account_l (account (transaction_a, block_a));
+	auto account_l (token_account (transaction_a, block_a));
 	rollback_visitor rollback (transaction_a, *this);
 	rai::account_info info;
 	while (store.block_exists (transaction_a, block_a))
@@ -779,7 +780,40 @@ rai::account rai::ledger::account (MDB_txn * transaction_a, rai::block_hash cons
 	if (block->type () == rai::block_type::state)
 	{
 		auto state_block (dynamic_cast<rai::state_block *> (block.get ()));
-		//result = state_block->hashables.account;
+		result = state_block->hashables.account;
+	}
+	else if (successor.is_zero ())
+	{
+		result = store.frontier_get (transaction_a, hash);
+	}
+	else
+	{
+		result = block_info.account;
+	}
+	assert (!result.is_zero ());
+	return result;
+}
+
+// Return token_account containing hash
+rai::account rai::ledger::token_account (MDB_txn * transaction_a, rai::block_hash const & hash_a)
+{
+	rai::account result;
+	auto hash (hash_a);
+	rai::block_hash successor (1);
+	rai::block_info block_info;
+	std::unique_ptr<rai::block> block (store.block_get (transaction_a, hash));
+	while (!successor.is_zero () && block->type () != rai::block_type::state && store.block_info_get (transaction_a, successor, block_info))
+	{
+		successor = store.block_successor (transaction_a, hash);
+		if (!successor.is_zero ())
+		{
+			hash = successor;
+			block = store.block_get (transaction_a, hash);
+		}
+	}
+	if (block->type () == rai::block_type::state)
+	{
+		auto state_block (dynamic_cast<rai::state_block *> (block.get ()));
 		rai::account_info info;
 		store.accounts_get (transaction_a, state_block->hashables.account, state_block->hashables.token_hash, info);
 		result = info.open_block;
@@ -805,10 +839,10 @@ rai::uint128_t rai::ledger::amount (MDB_txn * transaction_a, rai::block_hash con
 }
 
 // Return latest block for account
-rai::block_hash rai::ledger::latest (MDB_txn * transaction_a, rai::account const & account_a)
+rai::block_hash rai::ledger::latest (MDB_txn * transaction_a, rai::account const & account_a, rai::block_hash const & token_hash_a)
 {
 	rai::account_info info;
-	auto latest_error (store.account_get (transaction_a, account_a, info));
+	auto latest_error (store.accounts_get (transaction_a, account_a, token_hash_a, info));
 	return latest_error ? 0 : info.head;
 }
 
@@ -840,13 +874,16 @@ rai::checksum rai::ledger::checksum (MDB_txn * transaction_a, rai::account const
 void rai::ledger::dump_account_chain (rai::account const & account_a)
 {
 	rai::transaction transaction (store.environment, nullptr, false);
-	auto hash (latest (transaction, account_a));
-	while (!hash.is_zero ())
+	for (auto entry = rai::map_sc_info.begin (); entry != rai::map_sc_info.end (); ++entry)
 	{
-		auto block (store.block_get (transaction, hash));
-		assert (block != nullptr);
-		std::cerr << hash.to_string () << std::endl;
-		hash = block->previous ();
+		auto hash (latest (transaction, account_a, entry->first));
+		while (!hash.is_zero ())
+		{
+			auto block (store.block_get (transaction, hash));
+			assert (block != nullptr);
+			std::cerr << hash.to_string () << std::endl;
+			hash = block->previous ();
+		}
 	}
 }
 
@@ -933,32 +970,6 @@ std::unique_ptr<rai::block> rai::ledger::forked_block (MDB_txn * transaction_a, 
 		assert (!error);
 		result = store.block_get (transaction_a, info.open_block);
 		assert (result != nullptr);
-	}
-	return result;
-}
-
-rai::uint128_t rai::ledger::accounts_balance (MDB_txn * transaction_a, rai::account const & account_a, rai::account const & token_type_a)
-{
-	rai::uint128_t result (0);
-	rai::account_info info;
-	auto none (store.accounts_get (transaction_a, account_a, token_type_a, info));
-	if (!none)
-	{
-		result = info.balance.number ();
-	}
-	return result;
-}
-
-rai::uint128_t rai::ledger::accounts_pending (MDB_txn * transaction_a, rai::account const & account_a, rai::account const & token_type_a)
-{
-	rai::uint128_t result (0);
-	rai::account_info info;
-	store.accounts_get (transaction_a, account_a, token_type_a, info);
-	rai::account end (info.open_block.number () + 1);
-	for (auto i (store.pending_begin (transaction_a, rai::pending_key (info.open_block, 0))), n (store.pending_begin (transaction_a, rai::pending_key (end, 0))); i != n; ++i)
-	{
-		rai::pending_info info (i->second);
-		result += info.amount.number ();
 	}
 	return result;
 }

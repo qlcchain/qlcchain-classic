@@ -1472,9 +1472,21 @@ std::shared_ptr<rai::vote> rai::block_store::vote_max (MDB_txn * transaction_a, 
 	return result;
 }
 
-rai::store_iterator rai::block_store::latest_begin (MDB_txn * transaction_a, rai::account const & account_a)
+rai::store_iterator rai::block_store::account_latest_begin (MDB_txn * transaction_a, rai::account const & account_a)
 {
-	rai::store_iterator result (transaction_a, token_accounts, rai::mdb_val (account_a));
+	rai::store_iterator result (transaction_a, accounts, rai::mdb_val (account_a));
+	return result;
+}
+
+rai::store_iterator rai::block_store::account_latest_begin (MDB_txn * transaction_a)
+{
+	rai::store_iterator result (transaction_a, accounts);
+	return result;
+}
+
+rai::store_iterator rai::block_store::latest_begin (MDB_txn * transaction_a, rai::account const & token_account_a)
+{
+	rai::store_iterator result (transaction_a, token_accounts, rai::mdb_val (token_account_a));
 	return result;
 }
 

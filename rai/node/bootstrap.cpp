@@ -1719,7 +1719,7 @@ void rai::bulk_pull_server::set_current_end ()
 	{
 		if (!request->end.is_zero ())
 		{
-			auto account (connection->node->ledger.account (transaction, request->end));
+			auto account (connection->node->ledger.token_account (transaction, request->end));
 			if (account == request->start)
 			{
 				current = info.head;

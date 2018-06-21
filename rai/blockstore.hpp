@@ -124,6 +124,8 @@ public:
 	 */
 	bool account_exists (MDB_txn *, rai::account const &);
 	size_t account_count (MDB_txn *);
+	rai::store_iterator account_latest_begin (MDB_txn *, rai::account const &);
+	rai::store_iterator account_latest_begin (MDB_txn *);
 	rai::store_iterator latest_begin (MDB_txn *, rai::account const &);
 	rai::store_iterator latest_begin (MDB_txn *);
 	rai::store_iterator latest_end ();

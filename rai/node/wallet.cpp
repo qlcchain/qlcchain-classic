@@ -925,7 +925,7 @@ std::shared_ptr<rai::block> rai::wallet::change_action (rai::account const & sou
 			if (existing != store.end () && !node.ledger.latest (transaction, source_a).is_zero ())
 			{
 				rai::account_info info;
-				auto error1 (node.ledger.store.account_get (transaction, source_a, info));
+				auto error1 (node.ledger.store.accounts_get (transaction, source_a, rai::chain_token_type, info));
 				assert (!error1);
 				rai::raw_key prv;
 				auto error2 (store.fetch (transaction, source_a, prv));
@@ -990,7 +990,7 @@ std::shared_ptr<rai::block> rai::wallet::send_action (rai::account const & sourc
 				auto existing (store.find (transaction, source_a));
 				if (existing != store.end ())
 				{
-					auto balance (node.ledger.accounts_balance (transaction, source_a, token_hash_a));
+					auto balance (node.ledger.account_balance (transaction, source_a, token_hash_a));
 					if (!balance.is_zero () && balance >= amount_a)
 					{
 						rai::account_info info;
