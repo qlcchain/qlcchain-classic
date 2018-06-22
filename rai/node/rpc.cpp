@@ -649,45 +649,36 @@ void rai::rpc_handler::account_representative_set ()
 						}
 						if (work)
 						{
-							std::string token_text (request.get<std::string> ("token"));
-							rai::block_hash token_hash;
-							if (!find_token_hash (token_text, token_hash))
+							rai::transaction transaction (node.store.environment, nullptr, true);
+							rai::account_info info;
+							if (!node.store.accounts_get (transaction, account, rai::chain_token_type, info))
 							{
-								error_response (response, "Invalid token name");
-							}
-							else
-							{
-								rai::transaction transaction (node.store.environment, nullptr, true);
-								rai::account_info info;
-								if (!node.store.accounts_get (transaction, account, token_hash, info))
+								if (!rai::work_validate (info.head, work))
 								{
-									if (!rai::work_validate (info.head, work))
-									{
-										existing->second->store.work_put (transaction, account, work);
-										auto response_a (response);
-										wallet->change_async (info.open_block, representative, [&response_a](std::shared_ptr<rai::block> block) {
-											rai::block_hash hash (0);
-											if (block != nullptr)
-											{
-												hash = block->hash ();
-											}
-											boost::property_tree::ptree response_l;
-											response_l.put ("block", hash.to_string ());
-											response_a (response_l);
-										},
-										work == 0);
-									}
-									else
-									{
-										error_response (response, "Invalid work");
-									}
+									existing->second->store.work_put (transaction, account, work);
 								}
 								else
 								{
-									error_response (response, "Account not found");
+									error_response (response, "Invalid work");
 								}
 							}
+							else
+							{
+								error_response (response, "Account not found");
+							}
 						}
+						auto response_a (response);
+						wallet->change_async (account, representative, [response_a](std::shared_ptr<rai::block> block) {
+							rai::block_hash hash (0);
+							if (block != nullptr)
+							{
+								hash = block->hash ();
+							}
+							boost::property_tree::ptree response_l;
+							response_l.put ("block", hash.to_string ());
+							response_a (response_l);
+						},
+						work == 0);
 					}
 				}
 				else
@@ -934,7 +925,7 @@ void rai::rpc_handler::available_supply ()
 	//	auto landing_balance (node.balance (rai::account ("059F68AAB29DE0D3A27443625C7EA9CDDB6517A8B76FE37727EF6A4D76832AD5"))); // Active unavailable account
 	//	auto faucet_balance (node.balance (rai::account ("8E319CE6F3025E5B2DF66DA7AB1467FE48F1679C13DD43BFDB29FA2E9FC40D3B"))); // Faucet account
 	auto burned_balance ((node.balance_pending (rai::account (0))).second); // Burning 0 account
-	auto available (rai::genesis_amount - genesis_balance);
+	auto available (rai::genesis_amount - genesis_balance - burned_balance);
 	boost::property_tree::ptree response_l;
 	response_l.put ("available", available.convert_to<std::string> ());
 	response (response_l);
