@@ -1317,7 +1317,7 @@ void rai_qt::wallet::start ()
 					if (!parse_error)
 					{
 						rai::transaction transaction (this_l->node.store.environment, nullptr, false);
-						auto balance (this_l->wallet_m->node.ledger.accounts_balance (transaction, this_l->account, token_type));
+						auto balance (this_l->wallet_m->node.ledger.account_balance (transaction, this_l->account, token_type));
 						if (actual <= balance)
 						{
 							if (this_l->wallet_m->store.valid_password (transaction))
@@ -1468,12 +1468,11 @@ void rai_qt::wallet::start ()
 			this_l->application.postEvent (&this_l->processor, new eventloop_event ([this_w, block_a, account_a]() {
 				if (auto this_l = this_w.lock ())
 				{
-					auto account (info.account);
-					if (this_l->wallet_m->exists (account))
+					if (this_l->wallet_m->exists (account_a))
 					{
 						this_l->accounts.refresh ();
 					}
-					if (account == this_l->account)
+					if (account_a == this_l->account)
 					{
 						this_l->history.refresh ();
 					}
