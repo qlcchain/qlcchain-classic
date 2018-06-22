@@ -2140,8 +2140,8 @@ std::pair<rai::uint128_t, rai::uint128_t> rai::node::balance_pending (rai::accou
 {
 	std::pair<rai::uint128_t, rai::uint128_t> result;
 	rai::transaction transaction (store.environment, nullptr, false);
-	result.first = ledger.account_balance (transaction, account_a);
-	result.second = ledger.account_pending (transaction, account_a);
+	result.first = ledger.account_balance (transaction, account_a, token_hash_a);
+	result.second = ledger.account_pending (transaction, account_a, token_hash_a);
 	return result;
 }
 

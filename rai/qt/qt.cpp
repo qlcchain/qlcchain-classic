@@ -600,7 +600,7 @@ public:
 				type = "Receive";
 				if (ledger.store.block_get (transaction, block_a.hashables.link))
 				{
-				    // open block ??
+					// open block ??
 					account = ledger.account (transaction, block_a.hashables.link);
 				}
 				else
