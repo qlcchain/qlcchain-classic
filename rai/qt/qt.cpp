@@ -598,9 +598,17 @@ public:
 			else
 			{
 				type = "Receive";
-				account = ledger.account (transaction, block_a.hashables.link);
+				if (ledger.store.block_get (transaction, block_a.hashables.link))
+				{
+				    // open block ??
+					account = ledger.account (transaction, block_a.hashables.link);
+				}
+				else
+				{
+					account = block_a.hashables.account;
+				}
 			}
-			account = block_a.hashables.account;
+
 			amount = balance - previous_balance;
 		}
 	}
