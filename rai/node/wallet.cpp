@@ -1361,8 +1361,14 @@ void rai::wallets::foreach_representative (MDB_txn * transaction_a, std::functio
 				{
 					rai::raw_key prv;
 					auto error (wallet.store.fetch (transaction_a, j->first.uint256 (), prv));
-					assert (!error);
-					action_a (j->first.uint256 (), prv);
+					if (!error)
+					{
+						action_a (j->first.uint256 (), prv);
+					}
+					else
+					{
+						BOOST_LOG (node.log) << boost::str (boost::format ("Can not fetch account %1% from wallet %2%") % j->first.uint256 ().to_account () % i->first.to_string ());
+					}
 				}
 				else
 				{
