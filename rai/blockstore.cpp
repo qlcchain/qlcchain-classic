@@ -491,7 +491,7 @@ void rai::block_store::upgrade_v8_to_v9 (MDB_txn * transaction_a)
 	version_put (transaction_a, 9);
 	MDB_dbi sequence;
 	mdb_dbi_open (transaction_a, "sequence", MDB_CREATE | MDB_DUPSORT, &sequence);
-	rai::genesis genesis;
+	rai::genesis genesis(rai::rai_live_genesis);
 	std::shared_ptr<rai::block> block (std::move (genesis.state));
 	rai::keypair junk;
 	for (rai::store_iterator i (transaction_a, sequence), n (nullptr); i != n; ++i)

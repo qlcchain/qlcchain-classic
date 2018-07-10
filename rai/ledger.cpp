@@ -764,14 +764,12 @@ void rai::ledger::rollback (MDB_txn * transaction_a, rai::block_hash const & blo
 rai::account rai::ledger::account (MDB_txn * transaction_a, rai::block_hash const & hash_a)
 {
 	// TODO: refine the stupid logical
-	if (hash_a == rai::genesis_account)
+	for (auto account = rai::list_genesis_accounts.begin(); account != rai::list_genesis_accounts.end(); ++account)
 	{
-		return rai::genesis_account;
-	}
-
-	if (hash_a == rai::genesis_account_QN1)
-	{
-		return rai::genesis_account_QN1;
+		if (hash_a == *account)
+		{
+			return *account;
+		}
 	}
 	rai::account result;
 	auto hash (hash_a);

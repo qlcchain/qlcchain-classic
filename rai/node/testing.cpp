@@ -145,7 +145,7 @@ void rai::system::generate_rollback (rai::node & node_a, std::vector<rai::accoun
 	if (!error)
 	{
 		auto hash (info.open_block);
-		rai::genesis genesis;
+		rai::genesis genesis(rai::rai_live_genesis);
 		if (hash != genesis.hash ())
 		{
 			accounts_a[index] = accounts_a[accounts_a.size () - 1];

@@ -827,7 +827,8 @@ lmdb_max_dbs (128)
 			break;
 		case rai::rai_networks::rai_live_network:
 			//preconfigured_peers.push_back ("rai.raiblocks.net");
-			preconfigured_peers.push_back ("47.91.166.18");
+			preconfigured_peers.push_back ("qlcChain.online");
+			preconfigured_peers.push_back("node1.qlcChain.online");
 			preconfigured_representatives.push_back (rai::account ("1327950B79C7A18C61C26965E274F38E0D8C618CDD72BA17E00E2F3655CE0B78"));
 #if 0
 			preconfigured_representatives.push_back (rai::account ("A30E0A32ED41C8607AA9212843392E853FCBCB4E7CB194E35C94F07F91DE59EF"));
@@ -1716,14 +1717,16 @@ stats (config.stat_config)
 		if (store.latest_begin (transaction) == store.latest_end ())
 		{
 			// Store was empty meaning we just created it, add the genesis block
-			rai::genesis genesis;
-			genesis.initialize (transaction, store);
-			rai::genesis_sc_block genesis_sc_block;
-			genesis_sc_block.initialize (transaction, store);
-			rai::genesis_QN1 genesis_QN1;
-			genesis_QN1.initialize (transaction, store);
-			rai::genesis_sc_block_QN1 genesis_sc_block_QN1;
-			genesis_sc_block_QN1.initialize (transaction, store);
+			for (auto block = rai::list_genesis_blocks.begin(); block != rai::list_genesis_blocks.end(); ++block)
+			{
+				rai::genesis genesis(*block);
+				genesis.initialize(transaction, store);
+			}
+			for (auto block = rai::list_sc_blocks.begin(); block != rai::list_sc_blocks.end(); ++block)
+			{
+				rai::genesis_sc_block genesis_sc_block(*block);
+				genesis_sc_block.initialize(transaction, store);
+			}
 		}
 	}
 	if (rai::rai_network == rai::rai_networks::rai_live_network)
