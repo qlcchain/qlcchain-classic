@@ -350,9 +350,7 @@ extern rai::block_hash const & chain_token_type_QN3;
 extern rai::block_hash const & chain_token_type_QN4;
 extern rai::block_hash const & chain_token_type_QN5;
 extern std::unordered_map<rai::block_hash, std::list<std::string>> map_sc_info;
-extern std::list<rai::account> list_genesis_accounts;
-extern std::list<std::string> list_sc_blocks;
-extern std::list<std::string> list_genesis_blocks;
+extern std::unordered_map<rai::account, std::list<std::string>> map_genesis_blocks;
 class genesis
 {
 public:

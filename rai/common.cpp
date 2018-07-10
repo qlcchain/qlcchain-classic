@@ -274,20 +274,13 @@ public:
 		{ chain_token_type_QN4, { "QN4", rai::xrb_ratio.convert_to<std::string>(), "8",  "QN4" } },
 		{ chain_token_type_QN5, { "QN5", rai::xrb_ratio.convert_to<std::string>(), "8",  "QN5" } },
 	};
-	std::list<rai::account> genesis_accounts = {	
-		rai_live_account,rai_live_account_QN1,
-		rai_live_account_QN2, rai_live_account_QN4,
-		rai_live_account_QN3,rai_live_account_QN5
-	};
-	std::list<std::string> sc_blocks = {
-		smart_contrac_block_genesis_data    , smart_contrac_block_genesis_data_QN1,
-		smart_contrac_block_genesis_data_QN2, smart_contrac_block_genesis_data_QN3,
-		smart_contrac_block_genesis_data_QN4, smart_contrac_block_genesis_data_QN5
-	};
-	std::list<std::string> genesis_blocks = {
-		live_genesis_data    , live_genesis_data_QN1,
-		live_genesis_data_QN2, live_genesis_data_QN3,
-		live_genesis_data_QN4, live_genesis_data_QN5
+	std::unordered_map<rai::account,std::list<std::string>> genesis_blocks = {
+		{ rai_live_account	  ,{ live_genesis_data    ,smart_contrac_block_genesis_data     } },
+		{ rai_live_account_QN1,{ live_genesis_data_QN1,smart_contrac_block_genesis_data_QN1 } },
+		{ rai_live_account_QN2,{ live_genesis_data_QN2,smart_contrac_block_genesis_data_QN2 } },
+		{ rai_live_account_QN3,{ live_genesis_data_QN3,smart_contrac_block_genesis_data_QN3 } },
+		{ rai_live_account_QN4,{ live_genesis_data_QN4,smart_contrac_block_genesis_data_QN4 } },
+		{ rai_live_account_QN5,{ live_genesis_data_QN5,smart_contrac_block_genesis_data_QN5 } },
 	};
 };
 ledger_constants globals;
@@ -321,9 +314,7 @@ rai::block_hash const & rai::chain_token_type_QN3(globals.chain_token_type_QN3);
 rai::block_hash const & rai::chain_token_type_QN4(globals.chain_token_type_QN4);
 rai::block_hash const & rai::chain_token_type_QN5(globals.chain_token_type_QN5);
 std::unordered_map<rai::block_hash, std::list<std::string>> rai::map_sc_info (globals.sc_infos.begin (), globals.sc_infos.end ());
-std::list<rai::account> rai::list_genesis_accounts(globals.genesis_accounts);
-std::list<std::string> rai::list_sc_blocks(globals.sc_blocks);
-std::list<std::string> rai::list_genesis_blocks(globals.genesis_blocks);
+std::unordered_map<rai::account, std::list<std::string>> rai::map_genesis_blocks(globals.genesis_blocks);
 
 rai::votes::votes (std::shared_ptr<rai::block> block_a) :
 id (block_a->root ())

@@ -1717,14 +1717,11 @@ stats (config.stat_config)
 		if (store.latest_begin (transaction) == store.latest_end ())
 		{
 			// Store was empty meaning we just created it, add the genesis block
-			for (auto block = rai::list_genesis_blocks.begin(); block != rai::list_genesis_blocks.end(); ++block)
+			for (auto block = rai::map_genesis_blocks.begin(); block != rai::map_genesis_blocks.end(); ++block)
 			{
-				rai::genesis genesis(*block);
+				rai::genesis genesis(block->second.front());
 				genesis.initialize(transaction, store);
-			}
-			for (auto block = rai::list_sc_blocks.begin(); block != rai::list_sc_blocks.end(); ++block)
-			{
-				rai::genesis_sc_block genesis_sc_block(*block);
+				rai::genesis_sc_block genesis_sc_block(block->second.back());
 				genesis_sc_block.initialize(transaction, store);
 			}
 		}
