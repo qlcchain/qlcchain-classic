@@ -4779,6 +4779,25 @@ void rai::rpc_handler::smart_contract_block ()
 	}
 }
 
+void rai::rpc_handler::tokens ()
+{
+	boost::property_tree::ptree response_l;
+	boost::property_tree::ptree tokens;
+
+	for (auto entry = rai::map_sc_info.begin (); entry != rai::map_sc_info.end (); ++entry)
+	{
+		boost::property_tree::ptree token;
+		token.put ("token_name", *std::next (entry->second.begin (), 0));
+		token.put ("ratio", *std::next (entry->second.begin (), 1));
+		//精度（最小分割数量），单位为小数点之后的位数
+		token.put ("precision", *std::next (entry->second.begin (), 2));
+		token.put ("symbol", *std::next (entry->second.begin (), 3));
+		tokens.push_back (std::make_pair (entry->first.to_string (), token));
+	}
+	response_l.add_child ("tokens", tokens);
+	response (response_l);
+}
+
 rai::rpc_connection::rpc_connection (rai::node & node_a, rai::rpc & rpc_a) :
 node (node_a.shared ()),
 rpc (rpc_a),
@@ -5328,6 +5347,10 @@ void rai::rpc_handler::process_request ()
 		else if (action == "invokescript")
 		{
 			smart_contract_invoke_script ();
+		}
+		else if (action == "tokens")
+		{
+			tokens ();
 		}
 		else
 		{

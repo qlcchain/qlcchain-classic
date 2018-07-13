@@ -206,7 +206,6 @@ char const * smart_contrac_block_genesis_data_QN5 = R"%%%({
     "work": "c8a0be5ac2299c89"
 })%%%";
 
-
 class ledger_constants
 {
 public:
@@ -218,21 +217,21 @@ public:
 	rai_live_account (live_public_key_data),
 	rai_test_genesis (test_genesis_data),
 	rai_beta_genesis (beta_genesis_data),
-	rai_live_genesis(live_genesis_data),
-	chain_token_type     ("3DA3D41A552B0135008A776EBBA7225E7773DBF867D86B9CD8FB650D6BAAD5DB"),
+	rai_live_genesis (live_genesis_data),
+	chain_token_type ("3DA3D41A552B0135008A776EBBA7225E7773DBF867D86B9CD8FB650D6BAAD5DB"),
 	chain_token_type_QN1 ("E66E8CAD20394B3D7FA984D07CC500829AD36B69005E98F45348D98C37BF8EDC"),
 	chain_token_type_QN2 ("3A938337C8B9F6BA8A6C94F3C53C02815E574E2BC2DCEC3EA2B60E67154FFECA"),
 	chain_token_type_QN3 ("9A4171BAA9133AFB9F8B77848A36592465A680375C8591E1EC7ADBB980C189F1"),
 	chain_token_type_QN4 ("222DC0E09225D6F929C96F3F1A0BF584ED680B9C253A5E0AE2C5C951098DDA0D"),
 	chain_token_type_QN5 ("AD3313731172B299E50B338C2CB7589A79F8B518F35D61CAF60953A9B5653AF4"),
 	genesis_account (rai::rai_network == rai::rai_networks::rai_test_network ? rai_test_account : rai::rai_network == rai::rai_networks::rai_beta_network ? rai_beta_account : rai_live_account),
-	rai_live_account_QN1(live_public_key_data_QN1),
-	rai_live_account_QN2(live_public_key_data_QN2),
-	rai_live_account_QN3(live_public_key_data_QN3),
-	rai_live_account_QN4(live_public_key_data_QN4),
-	rai_live_account_QN5(live_public_key_data_QN5),
+	rai_live_account_QN1 (live_public_key_data_QN1),
+	rai_live_account_QN2 (live_public_key_data_QN2),
+	rai_live_account_QN3 (live_public_key_data_QN3),
+	rai_live_account_QN4 (live_public_key_data_QN4),
+	rai_live_account_QN5 (live_public_key_data_QN5),
 	genesis_block (rai::rai_network == rai::rai_networks::rai_test_network ? rai_test_genesis : rai::rai_network == rai::rai_networks::rai_beta_network ? rai_beta_genesis : rai_live_genesis),
-	genesis_amount (std::numeric_limits<rai::uint128_t>::max()),
+	genesis_amount (std::numeric_limits<rai::uint128_t>::max ()),
 	burn_account (0)
 	{
 		CryptoPP::AutoSeededRandomPool random_pool;
@@ -266,21 +265,21 @@ public:
 	rai::block_hash chain_token_type_QN4;
 	rai::block_hash chain_token_type_QN5;
 	std::unordered_map<rai::block_hash, std::list<std::string>> sc_infos = {
-		{ chain_token_type, { "Root_Token", rai::xrb_ratio.convert_to<std::string> (), "8", "QLC" } },
+		{ chain_token_type, { "Root_Token", rai::xrb_ratio.convert_to<std::string> (), "24", "QLC" } },
 		// FIXME: 生成合约代码
-		{ chain_token_type_QN1, { "QN1", rai::xrb_ratio.convert_to<std::string> (), "8", "QN1" } },
-		{ chain_token_type_QN2, { "QN2", rai::xrb_ratio.convert_to<std::string>(), "8",	 "QN2" } },
-		{ chain_token_type_QN3, { "QN3", rai::xrb_ratio.convert_to<std::string>(), "8",  "QN3" } },
-		{ chain_token_type_QN4, { "QN4", rai::xrb_ratio.convert_to<std::string>(), "8",  "QN4" } },
-		{ chain_token_type_QN5, { "QN5", rai::xrb_ratio.convert_to<std::string>(), "8",  "QN5" } },
+		{ chain_token_type_QN1, { "QN1", rai::uxrb_ratio.convert_to<std::string> (), "18", "QN1" } },
+		{ chain_token_type_QN2, { "QN2", rai::xrb_ratio.convert_to<std::string> (), "8", "QN2" } },
+		{ chain_token_type_QN3, { "QN3", rai::xrb_ratio.convert_to<std::string> (), "8", "QN3" } },
+		{ chain_token_type_QN4, { "QN4", rai::Mxrb_ratio.convert_to<std::string> (), "30", "QN4" } },
+		{ chain_token_type_QN5, { "QN5", rai::Gxrb_ratio.convert_to<std::string> (), "33", "QN5" } },
 	};
-	std::unordered_map<rai::account,std::list<std::string>> genesis_blocks = {
-		{ rai_live_account	  ,{ live_genesis_data    ,smart_contrac_block_genesis_data     } },
-		{ rai_live_account_QN1,{ live_genesis_data_QN1,smart_contrac_block_genesis_data_QN1 } },
-		{ rai_live_account_QN2,{ live_genesis_data_QN2,smart_contrac_block_genesis_data_QN2 } },
-		{ rai_live_account_QN3,{ live_genesis_data_QN3,smart_contrac_block_genesis_data_QN3 } },
-		{ rai_live_account_QN4,{ live_genesis_data_QN4,smart_contrac_block_genesis_data_QN4 } },
-		{ rai_live_account_QN5,{ live_genesis_data_QN5,smart_contrac_block_genesis_data_QN5 } },
+	std::unordered_map<rai::account, std::list<std::string>> genesis_blocks = {
+		{ rai_live_account, { live_genesis_data, smart_contrac_block_genesis_data } },
+		{ rai_live_account_QN1, { live_genesis_data_QN1, smart_contrac_block_genesis_data_QN1 } },
+		{ rai_live_account_QN2, { live_genesis_data_QN2, smart_contrac_block_genesis_data_QN2 } },
+		{ rai_live_account_QN3, { live_genesis_data_QN3, smart_contrac_block_genesis_data_QN3 } },
+		{ rai_live_account_QN4, { live_genesis_data_QN4, smart_contrac_block_genesis_data_QN4 } },
+		{ rai_live_account_QN5, { live_genesis_data_QN5, smart_contrac_block_genesis_data_QN5 } },
 	};
 };
 ledger_constants globals;
@@ -309,12 +308,12 @@ rai::block_hash const & rai::not_an_account (globals.not_an_account);
 rai::account const & rai::burn_account (globals.burn_account);
 rai::block_hash const & rai::chain_token_type (globals.chain_token_type);
 rai::block_hash const & rai::chain_token_type_QN1 (globals.chain_token_type_QN1);
-rai::block_hash const & rai::chain_token_type_QN2(globals.chain_token_type_QN2);
-rai::block_hash const & rai::chain_token_type_QN3(globals.chain_token_type_QN3);
-rai::block_hash const & rai::chain_token_type_QN4(globals.chain_token_type_QN4);
-rai::block_hash const & rai::chain_token_type_QN5(globals.chain_token_type_QN5);
+rai::block_hash const & rai::chain_token_type_QN2 (globals.chain_token_type_QN2);
+rai::block_hash const & rai::chain_token_type_QN3 (globals.chain_token_type_QN3);
+rai::block_hash const & rai::chain_token_type_QN4 (globals.chain_token_type_QN4);
+rai::block_hash const & rai::chain_token_type_QN5 (globals.chain_token_type_QN5);
 std::unordered_map<rai::block_hash, std::list<std::string>> rai::map_sc_info (globals.sc_infos.begin (), globals.sc_infos.end ());
-std::unordered_map<rai::account, std::list<std::string>> rai::map_genesis_blocks(globals.genesis_blocks);
+std::unordered_map<rai::account, std::list<std::string>> rai::map_genesis_blocks (globals.genesis_blocks);
 
 rai::votes::votes (std::shared_ptr<rai::block> block_a) :
 id (block_a->root ())
@@ -804,7 +803,7 @@ void rai::amount_visitor::change_block (rai::change_block const & block_a)
 void rai::amount_visitor::compute (rai::block_hash const & block_hash)
 {
 	current_amount = block_hash;
-	rai::genesis genesis(rai::rai_live_genesis);
+	rai::genesis genesis (rai::rai_live_genesis);
 	auto genesis_open_hash (genesis.hash ());
 	while (!current_amount.is_zero () || !current_balance.is_zero ())
 	{
@@ -1113,10 +1112,10 @@ rai::genesis::genesis (std::string genesis_block)
 void rai::genesis::initialize (MDB_txn * transaction_a, rai::block_store & store_a) const
 {
 	auto hash_l (hash ());
-	assert (store_a.latest_begin (transaction_a) == store_a.latest_end ());
+	//	assert (store_a.latest_begin (transaction_a) == store_a.latest_end ());
 	store_a.block_put (transaction_a, hash_l, *state);
 	store_a.account_put (transaction_a, hash_l, { hash_l, hash_l, hash_l, state->hashables.balance, rai::seconds_since_epoch (), 1, state->hashables.token_hash, state->hashables.account });
-	store_a.representation_put (transaction_a, state->hashables.account, std::numeric_limits<rai::uint128_t>::max());
+	store_a.representation_put (transaction_a, state->hashables.account, std::numeric_limits<rai::uint128_t>::max ());
 	store_a.checksum_put (transaction_a, 0, 0, hash_l);
 	store_a.frontier_put (transaction_a, hash_l, hash_l);
 }
@@ -1145,5 +1144,3 @@ rai::block_hash rai::genesis_sc_block::hash () const
 {
 	return sc_block->hash ();
 }
-
-
