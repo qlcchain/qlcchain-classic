@@ -1115,7 +1115,7 @@ void rai::genesis::initialize (MDB_txn * transaction_a, rai::block_store & store
 	//	assert (store_a.latest_begin (transaction_a) == store_a.latest_end ());
 	store_a.block_put (transaction_a, hash_l, *state);
 	store_a.account_put (transaction_a, hash_l, { hash_l, hash_l, hash_l, state->hashables.balance, rai::seconds_since_epoch (), 1, state->hashables.token_hash, state->hashables.account });
-	store_a.representation_put (transaction_a, state->hashables.account, std::numeric_limits<rai::uint128_t>::max ());
+	store_a.representation_put (transaction_a, rai::genesis_account, rai::genesis_amount);
 	store_a.checksum_put (transaction_a, 0, 0, hash_l);
 	store_a.frontier_put (transaction_a, hash_l, hash_l);
 }
