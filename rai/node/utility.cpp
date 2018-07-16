@@ -14,13 +14,13 @@ boost::filesystem::path rai::working_path ()
 	switch (rai::rai_network)
 	{
 		case rai::rai_networks::rai_test_network:
-			result /= "RaiBlocksTest";
+			result /= "QLCChainTest";
 			break;
 		case rai::rai_networks::rai_beta_network:
-			result /= "RaiBlocksBeta";
+			result /= "QLCChainBeta";
 			break;
 		case rai::rai_networks::rai_live_network:
-			result /= "RaiBlocks";
+			result /= "QLCChain";
 			break;
 	}
 	return result;
