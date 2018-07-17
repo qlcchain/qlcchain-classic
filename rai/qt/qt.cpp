@@ -1156,7 +1156,7 @@ wallet (wallet_a)
 }
 
 rai_qt::wallet::wallet (QApplication & application_a, rai_qt::eventloop_processor & processor_a, rai::node & node_a, std::shared_ptr<rai::wallet> wallet_a, rai::account & account_a) :
-rendering_ratio (rai::Mxrb_ratio),
+rendering_ratio (rai::Mqlc_ratio),
 node (node_a),
 wallet_m (wallet_a),
 account (account_a),
@@ -1643,11 +1643,11 @@ std::string rai_qt::wallet::format_balance (rai::uint128_t const & balance, rai:
 		auto unit (v[rai::smart_contract_field::unit]);
 		auto lower_unit (unit);
 		std::transform (lower_unit.begin (), lower_unit.end (), lower_unit.begin (), [](unsigned char c) { return std::tolower (c); });
-		if (rendering_ratio == rai::kxrb_ratio)
+		if (rendering_ratio == rai::Kqlc_ratio)
 		{
 			unit = std::string ("k" + lower_unit);
 		}
-		else if (rendering_ratio == rai::xrb_ratio)
+		else if (rendering_ratio == rai::qlc_ratio)
 		{
 			unit = std::string (lower_unit);
 		}
@@ -1929,11 +1929,7 @@ account_viewer (new QPushButton ("Account Viewer")),
 stats_viewer (new QPushButton ("Node Statistics")),
 scale_window (new QWidget),
 scale_layout (new QHBoxLayout),
-scale_label (new QLabel ("Scale:")),
 ratio_group (new QButtonGroup),
-mrai (new QRadioButton ("Mqlc")),
-krai (new QRadioButton ("kqlc")),
-rai (new QRadioButton ("qlc")),
 back (new QPushButton ("Back")),
 ledger_window (new QWidget),
 ledger_layout (new QVBoxLayout),
@@ -1952,18 +1948,6 @@ peers_refresh (new QPushButton ("Refresh")),
 peers_back (new QPushButton ("Back")),
 wallet (wallet_a)
 {
-	ratio_group->addButton (mrai);
-	ratio_group->addButton (krai);
-	ratio_group->addButton (rai);
-	ratio_group->setId (mrai, 0);
-	ratio_group->setId (krai, 1);
-	ratio_group->setId (rai, 2);
-	scale_layout->addWidget (scale_label);
-	scale_layout->addWidget (mrai);
-	scale_layout->addWidget (krai);
-	scale_layout->addWidget (rai);
-	scale_window->setLayout (scale_layout);
-
 	ledger_model->setHorizontalHeaderItem (0, new QStandardItem ("Account"));
 	ledger_model->setHorizontalHeaderItem (1, new QStandardItem ("Token"));
 	ledger_model->setHorizontalHeaderItem (2, new QStandardItem ("Balance"));
@@ -2010,25 +1994,6 @@ wallet (wallet_a)
 	layout->addWidget (back);
 	window->setLayout (layout);
 
-	QObject::connect (mrai, &QRadioButton::toggled, [this]() {
-		if (mrai->isChecked ())
-		{
-			this->wallet.change_rendering_ratio (rai::Mxrb_ratio);
-		}
-	});
-	QObject::connect (krai, &QRadioButton::toggled, [this]() {
-		if (krai->isChecked ())
-		{
-			this->wallet.change_rendering_ratio (rai::kxrb_ratio);
-		}
-	});
-	QObject::connect (rai, &QRadioButton::toggled, [this]() {
-		if (rai->isChecked ())
-		{
-			this->wallet.change_rendering_ratio (rai::xrb_ratio);
-		}
-	});
-	mrai->click ();
 	QObject::connect (wallet_refresh, &QPushButton::released, [this]() {
 		this->wallet.accounts.refresh ();
 		this->wallet.accounts.refresh_wallet_balance ();
