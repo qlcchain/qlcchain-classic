@@ -63,7 +63,7 @@ char const * live_genesis_data = R"%%%({
 		"account": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
 		"previous": "0000000000000000000000000000000000000000000000000000000000000000",
 		"representative": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
-		"balance": "340282366920938463463374607431768211455",
+		"balance": "60000000000000000",
 		"link": "1327950B79C7A18C61C26965E274F38E0D8C618CDD72BA17E00E2F3655CE0B78",
 		"link_as_account": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
 		"token": "3DA3D41A552B0135008A776EBBA7225E7773DBF867D86B9CD8FB650D6BAAD5DB",
@@ -88,7 +88,7 @@ char const * live_genesis_data_QN1 = R"%%%({
 		"account": "qlc_1uudbhpenjr1ii3k4ah9kax8f5f1qh3tt9qirjkj9mghew61qkfibw4haxtc",
 		"previous": "0000000000000000000000000000000000000000000000000000000000000000",
 		"representative": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
-		"balance": "300000000000000000000000000000000000000",
+		"balance": "70000000000000000",
 		"link": "6F6B4BECCA470084032121E7923A668DA0BBC3AD1EF0C46513CDCF67080BC9B0",
 		"link_as_account": "qlc_1uudbhpenjr1ii3k4ah9kax8f5f1qh3tt9qirjkj9mghew61qkfibw4haxtc",
 		"token": "E66E8CAD20394B3D7FA984D07CC500829AD36B69005E98F45348D98C37BF8EDC",
@@ -113,7 +113,7 @@ char const * live_genesis_data_QN2 = R"%%%({
     "account": "qlc_3s1agkbw6osftnodbcu9otawgdhz6q74xzpgsu641qzjgs8qdqfujim3z7ii",
     "previous": "0000000000000000000000000000000000000000000000000000000000000000",
     "representative": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
-	"balance": "290000000000000000000000000000000000000",
+	"balance": "50000000000000000",
     "link": "E4087493C2572DD52AB4AB67AE91C72DFF25CA2EFECECEC8205FF1764D75DDBB",
     "link_as_account": "qlc_3s1agkbw6osftnodbcu9otawgdhz6q74xzpgsu641qzjgs8qdqfujim3z7ii",
     "token": "3A938337C8B9F6BA8A6C94F3C53C02815E574E2BC2DCEC3EA2B60E67154FFECA",
@@ -137,7 +137,7 @@ char const * live_genesis_data_QN3 = R"%%%({
     "account": "qlc_1dtjuwiibgq7n5zcockqdyfgap7egfbxzqw8ygbtjn5aqffwxccxensu53i8",
     "previous": "0000000000000000000000000000000000000000000000000000000000000000",
     "representative": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
-	"balance": "280000000000000000000000000000000000000",
+	"balance": "80000000000000000",
     "link": "2F51DF2104BAE5A0FEAAAA575F9AE458AC7353DFDF86F393A8D068BB5BCEA95D",
     "link_as_account": "qlc_1dtjuwiibgq7n5zcockqdyfgap7egfbxzqw8ygbtjn5aqffwxccxensu53i8",
     "token": "9A4171BAA9133AFB9F8B77848A36592465A680375C8591E1EC7ADBB980C189F1",
@@ -161,7 +161,7 @@ char const * live_genesis_data_QN4 = R"%%%({
     "account": "qlc_3uq446hur8j7rgqu1bu1phyxb8gk3kkihqp3aqjghyg1hagsq8sizm4n7596",
     "previous": "0000000000000000000000000000000000000000000000000000000000000000",
     "representative": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
-	"balance": "270000000000000000000000000000000000000",
+	"balance": "90000000000000000",
     "link": "EEE2111FBC1A25C3AFB02760B3FDD499D20CA507DEC145E2E7F9C07A1D9B9B30",
     "link_as_account": "qlc_3uq446hur8j7rgqu1bu1phyxb8gk3kkihqp3aqjghyg1hagsq8sizm4n7596",
     "token": "222DC0E09225D6F929C96F3F1A0BF584ED680B9C253A5E0AE2C5C951098DDA0D",
@@ -187,7 +187,7 @@ char const * live_genesis_data_QN5 = R"%%%({
     "account": "qlc_1yuh366sczsfdekt183pp7b9d8gztj4mg3bshsyam7mxxrmy4nn89638o3me",
     "previous": "0000000000000000000000000000000000000000000000000000000000000000",
     "representative": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
-    "balance": "260000000000000000000000000000000000000",
+    "balance": "40000000000000000",
     "link": "7B6F0909957F2D5B25A01836B1527599DFD4453705397E7C89967DEE27E15286",
     "link_as_account": "qlc_1yuh366sczsfdekt183pp7b9d8gztj4mg3bshsyam7mxxrmy4nn89638o3me",
     "token": "AD3313731172B299E50B338C2CB7589A79F8B518F35D61CAF60953A9B5653AF4",
@@ -231,7 +231,7 @@ public:
 	rai_live_account_QN4 (live_public_key_data_QN4),
 	rai_live_account_QN5 (live_public_key_data_QN5),
 	genesis_block (rai::rai_network == rai::rai_networks::rai_test_network ? rai_test_genesis : rai::rai_network == rai::rai_networks::rai_beta_network ? rai_beta_genesis : rai_live_genesis),
-	genesis_amount (std::numeric_limits<rai::uint128_t>::max ()),
+	genesis_amount ("60000000000000000"),
 	burn_account (0)
 	{
 		CryptoPP::AutoSeededRandomPool random_pool;
@@ -265,13 +265,13 @@ public:
 	rai::block_hash chain_token_type_QN4;
 	rai::block_hash chain_token_type_QN5;
 	std::unordered_map<rai::block_hash, std::list<std::string>> sc_infos = {
-		{ chain_token_type, { "Root_Token", rai::xrb_ratio.convert_to<std::string> (), "24", "QLC" } },
+		{ chain_token_type, { "Root_Token", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QLC" } },
 		// FIXME: 生成合约代码
-		{ chain_token_type_QN1, { "QN1", rai::uxrb_ratio.convert_to<std::string> (), "18", "QN1" } },
-		{ chain_token_type_QN2, { "QN2", rai::xrb_ratio.convert_to<std::string> (), "8", "QN2" } },
-		{ chain_token_type_QN3, { "QN3", rai::xrb_ratio.convert_to<std::string> (), "8", "QN3" } },
-		{ chain_token_type_QN4, { "QN4", rai::Mxrb_ratio.convert_to<std::string> (), "30", "QN4" } },
-		{ chain_token_type_QN5, { "QN5", rai::Gxrb_ratio.convert_to<std::string> (), "33", "QN5" } },
+		{ chain_token_type_QN1, { "QN1", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QN1" } },
+		{ chain_token_type_QN2, { "QN2", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QN2" } },
+		{ chain_token_type_QN3, { "QN3", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QN3" } },
+		{ chain_token_type_QN4, { "QN4", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QN4" } },
+		{ chain_token_type_QN5, { "QN5", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QN5" } },
 	};
 	std::unordered_map<rai::account, std::list<std::string>> genesis_blocks = {
 		{ rai_live_account, { live_genesis_data, smart_contrac_block_genesis_data } },
@@ -818,7 +818,7 @@ void rai::amount_visitor::compute (rai::block_hash const & block_hash)
 			{
 				if (block_hash == genesis_open_hash)
 				{
-					amount = std::numeric_limits<rai::uint128_t>::max ();
+					amount = rai::genesis_amount;
 					current_amount = 0;
 				}
 				else

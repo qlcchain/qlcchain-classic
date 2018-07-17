@@ -2250,7 +2250,7 @@ void rai::rpc_handler::mrai_from_raw ()
 	rai::uint128_union amount;
 	if (!amount.decode_dec (amount_text))
 	{
-		auto result (amount.number () / rai::Mxrb_ratio);
+		auto result (amount.number () / rai::Mqlc_ratio);
 		boost::property_tree::ptree response_l;
 		response_l.put ("amount", result.convert_to<std::string> ());
 		response (response_l);
@@ -2267,7 +2267,7 @@ void rai::rpc_handler::mrai_to_raw ()
 	rai::uint128_union amount;
 	if (!amount.decode_dec (amount_text))
 	{
-		auto result (amount.number () * rai::Mxrb_ratio);
+		auto result (amount.number () * rai::Mqlc_ratio);
 		if (result > amount.number ())
 		{
 			boost::property_tree::ptree response_l;
@@ -2291,7 +2291,7 @@ void rai::rpc_handler::krai_from_raw ()
 	rai::uint128_union amount;
 	if (!amount.decode_dec (amount_text))
 	{
-		auto result (amount.number () / rai::kxrb_ratio);
+		auto result (amount.number () / rai::Kqlc_ratio);
 		boost::property_tree::ptree response_l;
 		response_l.put ("amount", result.convert_to<std::string> ());
 		response (response_l);
@@ -2308,7 +2308,7 @@ void rai::rpc_handler::krai_to_raw ()
 	rai::uint128_union amount;
 	if (!amount.decode_dec (amount_text))
 	{
-		auto result (amount.number () * rai::kxrb_ratio);
+		auto result (amount.number () * rai::Kqlc_ratio);
 		if (result > amount.number ())
 		{
 			boost::property_tree::ptree response_l;
@@ -2853,7 +2853,7 @@ void rai::rpc_handler::rai_from_raw ()
 	rai::uint128_union amount;
 	if (!amount.decode_dec (amount_text))
 	{
-		auto result (amount.number () / rai::xrb_ratio);
+		auto result (amount.number () / rai::qlc_ratio);
 		boost::property_tree::ptree response_l;
 		response_l.put ("amount", result.convert_to<std::string> ());
 		response (response_l);
@@ -2870,7 +2870,7 @@ void rai::rpc_handler::rai_to_raw ()
 	rai::uint128_union amount;
 	if (!amount.decode_dec (amount_text))
 	{
-		auto result (amount.number () * rai::xrb_ratio);
+		auto result (amount.number () * rai::qlc_ratio);
 		if (result > amount.number ())
 		{
 			boost::property_tree::ptree response_l;

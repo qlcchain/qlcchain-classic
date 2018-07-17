@@ -172,7 +172,7 @@ void rai::system::generate_receive (rai::node & node_a)
 	}
 	if (send_block != nullptr)
 	{
-		auto receive_error (wallet (0)->receive_sync (send_block, rai::genesis_account, std::numeric_limits<rai::uint128_t>::max ()));
+		auto receive_error (wallet (0)->receive_sync (send_block, rai::genesis_account, rai::genesis_amount));
 		(void)receive_error;
 	}
 }
@@ -219,7 +219,7 @@ rai::uint128_t rai::system::get_random_amount (MDB_txn * transaction_a, rai::nod
 	std::string balance_text (balance.convert_to<std::string> ());
 	rai::uint128_union random_amount;
 	random_pool.GenerateBlock (random_amount.bytes.data (), sizeof (random_amount.bytes));
-	auto result (((rai::uint256_t{ random_amount.number () } * balance) / rai::uint256_t{ std::numeric_limits<rai::uint128_t>::max () }).convert_to<rai::uint128_t> ());
+	auto result (((rai::uint256_t{ random_amount.number () } * balance) / rai::uint256_t{ rai::genesis_amount }).convert_to<rai::uint128_t> ());
 	std::string text (result.convert_to<std::string> ());
 	return result;
 }

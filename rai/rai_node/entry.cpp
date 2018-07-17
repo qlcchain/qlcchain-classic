@@ -80,7 +80,7 @@ int main (int argc, char * const * argv)
 					          << "Public: " << rep.pub.to_string () << std::endl
 					          << "Account: " << rep.pub.to_account () << std::endl;
 				}
-				rai::uint128_t balance (std::numeric_limits<rai::uint128_t>::max ());
+				rai::uint128_t balance (rai::genesis_amount);
 				//rai::open_block genesis_block (genesis.pub, genesis.pub, genesis.pub, genesis.prv, genesis.pub, work.generate (genesis.pub));
 				rai::state_block genesis_block (genesis.pub, 0, genesis.pub, balance, genesis.pub, rai::chain_token_type, genesis.prv, genesis.pub, work.generate (genesis.pub));
 				rai::state_block genesis_block_QN1 (genesis.pub, 0, genesis.pub, balance, genesis.pub, rai::chain_token_type_QN1, genesis.prv, genesis.pub, work.generate (genesis.pub));
