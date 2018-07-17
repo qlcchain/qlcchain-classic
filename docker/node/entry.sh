@@ -20,12 +20,13 @@ case "${network}" in
                 ;;
 esac
 
-nanodir="${HOME}/QLCChain${dirSuffix}"
-dbFile="${nanodir}/data.ldb"
-mkdir -p "${nanodir}"
-if [ ! -f "${nanodir}/config.json" ]; then
+qlcdir="${HOME}/QLCChain${dirSuffix}"
+dbFile="${qlcdir}/data.ldb"
+mkdir -p "${qlcdir}"
+if [ ! -f "${qlcdir}/config.json" ]; then
         echo "Config File not found, adding default."
-        cp "/usr/share/qlcchain/config/${network}.json" "${nanodir}/config.json"
+        cp "/usr/share/qlcchain/config/${network}.json" "${qlcdir}/config.json"
+	echo "${qlcdir}/config.json"
 fi
 
 pid=''

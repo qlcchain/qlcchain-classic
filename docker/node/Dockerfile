@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:16.04 AS builder
 
 ARG NETWORK=live
 ENV BOOST_ROOT=/tmp/boost_install
@@ -24,9 +24,10 @@ RUN mkdir /tmp/build && \
 
 FROM ubuntu:16.04
 EXPOSE 29734/udp 29735
-COPY --from=0 /tmp/build/qlc_node /usr/bin
-COPY --from=0 /etc/qlc-network /etc
+COPY --from=builder /tmp/build/qlc_node /usr/bin
+COPY --from=builder /etc/qlc-network /etc
 COPY docker/node/entry.sh /entry.sh
 COPY docker/node/config /usr/share/qlcchain/config
+
 RUN chmod +x /entry.sh
 CMD ["/bin/bash",  "/entry.sh"]
