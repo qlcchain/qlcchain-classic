@@ -373,8 +373,6 @@ back (new QPushButton ("Back")),
 wallet (wallet_a)
 {
 	layout->addWidget (seed_label);
-	seed->setPlaceholderText ("F58F8D627540322785F1BD935697A1A875D157E33087147D72DDE2F67A579A4E");
-	seed->setText ("F58F8D627540322785F1BD935697A1A875D157E33087147D72DDE2F67A579A4E");
 	layout->addWidget (seed);
 	layout->addWidget (clear_label);
 	layout->addWidget (clear_line);
