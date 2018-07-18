@@ -119,6 +119,7 @@ public:
 	void account_count ();
 	void account_create ();
 	void account_get ();
+	void account_history_topn ();
 	void account_history ();
 	void account_info ();
 	void account_key ();
