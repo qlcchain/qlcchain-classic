@@ -19,7 +19,7 @@ char const * test_private_key_data = "69AF95E5AD27F7DCEBBECFBFF7C05194F4E6678C8A
 char const * test_public_key_data = "B3DEFADF674A687DC0D4EF3EEF7B5A0E177BAE0D9887B562E2F234148D3682B3"; // xrb_3e3j5tkog48pnny9dmfzj1r16pg8t1e76dz5tmac6iq689wyjfpiij4txtdo
 char const * beta_public_key_data = "0311B25E0D1E1D7724BBA5BD523954F1DBCFC01CB8671D55ED2D32C7549FB252"; // xrb_11rjpbh1t9ixgwkdqbfxcawobwgusz13sg595ocytdbkrxcbzekkcqkc3dn1
 //char const * live_public_key_data = "E89208DD038FBB269987689621D52292AE9C35941A7484756ECCED92A65093BA"; // xrb_3t6k35gi95xu6tergt6p69ck76ogmitsa8mnijtpxm9fkcm736xtoncuohr3
-char const * live_public_key_data = "1327950B79C7A18C61C26965E274F38E0D8C618CDD72BA17E00E2F3655CE0B78";
+char const * live_public_key_data = "D5BA6C7BB3F4F6545E08B03D6DA1258840E0395080378A890601991A2A9E3163";
 char const * live_public_key_data_QN1 = "6F6B4BECCA470084032121E7923A668DA0BBC3AD1EF0C46513CDCF67080BC9B0";
 char const * live_public_key_data_QN2 = "E4087493C2572DD52AB4AB67AE91C72DFF25CA2EFECECEC8205FF1764D75DDBB";
 char const * live_public_key_data_QN3 = "2F51DF2104BAE5A0FEAAAA575F9AE458AC7353DFDF86F393A8D068BB5BCEA95D";
@@ -33,7 +33,7 @@ char const * test_genesis_data = R"%%%({
 	"balance": "340282366920938463463374607431768211455",
 	"link": "B3DEFADF674A687DC0D4EF3EEF7B5A0E177BAE0D9887B562E2F234148D3682B3",
 	"link_as_account": "qlc_3eyyzdhpgkmahq1fbusyxxxon5iqhgq1u869pojg7wjn4k8mf1omyi3ab6nq",
-	"token": "3DA3D41A552B0135008A776EBBA7225E7773DBF867D86B9CD8FB650D6BAAD5DB",
+	"token": "125998E086F7011384F89554676B69FCD86769642080CE7EED4A8AA83EF58F36",
 	"Token_name": "Root_Token",
 	"signature": "EF245C9BB426EB7574102EB11727AF760C4CB942D6864857BDAC7F2D28B344B1E2795E99B1509F49602AF54E7617EF4907AF47B2592870C62713947D3ADD4A0E",
 	"work": "2b61e26528833017"
@@ -59,41 +59,41 @@ char const * live_genesis_data = R"%%%({
 #endif
 
 char const * live_genesis_data = R"%%%({
-		"type": "state",
-		"account": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
-		"previous": "0000000000000000000000000000000000000000000000000000000000000000",
-		"representative": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
-		"balance": "60000000000000000",
-		"link": "1327950B79C7A18C61C26965E274F38E0D8C618CDD72BA17E00E2F3655CE0B78",
-		"link_as_account": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
-		"token": "3DA3D41A552B0135008A776EBBA7225E7773DBF867D86B9CD8FB650D6BAAD5DB",
-		"signature": "766AC05375B5BBED2A7F870A541DE1FE36FDB853300A76B17F698EDF944ED8419B78C721EFB37C532F205D7E360A6A3BF0DF8ABFEC2C0C0C5791F947D9344803",
-		"work": "f170a158fa6bead1"
+	"type": "state",
+	"account": "qlc_3oftfjxu9x9pcjh1je3xfpikd441w1wo313qjc6ie1es5aobwed5x4pjojic",
+	"previous": "0000000000000000000000000000000000000000000000000000000000000000",
+	"representative": "qlc_3oftfjxu9x9pcjh1je3xfpikd441w1wo313qjc6ie1es5aobwed5x4pjojic",
+	"balance": "60000000000000000",
+	"link": "D5BA6C7BB3F4F6545E08B03D6DA1258840E0395080378A890601991A2A9E3163",
+	"link_as_account": "qlc_3oftfjxu9x9pcjh1je3xfpikd441w1wo313qjc6ie1es5aobwed5x4pjojic",
+	"token": "125998E086F7011384F89554676B69FCD86769642080CE7EED4A8AA83EF58F36",
+	"signature": "AD57AA8819FA6A7811A13FF0684A79AFDEFB05077BCAD4EC7365C32D2A88D78C8C7C54717B40C0888A0692D05BF3771DF6D16A1F24AE612172922BBD4D93370F",
+	"work": "f3389dd67ced8429"
 })%%%";
 
 //QLINK:增加smart contract block的初始信息
 char const * smart_contrac_block_genesis_data = R"%%%({
-    	"type": "smart_contract",
-    	"internal-owned account": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
-    	"external-owned account": "qlc_3sczdr37zykkha4im7jnbta6ian8rbnhbk9qmcbs5fqpkehowak8qacp864g",
-    	"abi_hash": "FFF8FF5DF1B6ED4FC7F300848931416581AE742999A2399563842F579E018D6B",
-    	"abi_length": "64",
-    	"abi": "6060604052341561000F57600080FD5B336000806101000A81548173FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF021916908373FFFFFFFFFFFFFFFFFFFF",
-    	"signature": "16B015C487C06829406D62CB3BD41736942C285A6328F9E855FEB5870724FA66131AFC15027BDBB97C1E1539A19C0C961362AD23BE55D1C986614FFC5E3AAA06",
-    	"work": "ee99d963285bf3d5"
+	"type": "smart_contract",
+	"internal-owned account": "qlc_3oftfjxu9x9pcjh1je3xfpikd441w1wo313qjc6ie1es5aobwed5x4pjojic",
+	"external-owned account": "qlc_1cax48jzz5ndinpeqz6dxgptbegni39jiudwo1qgf5iicbuh83a4nbkzoa7a",
+	"abi_hash": "FFF8FF5DF1B6ED4FC7F300848931416581AE742999A2399563842F579E018D6B",
+	"abi_length": "64",
+	"abi": "6060604052341561000F57600080FD5B336000806101000A81548173FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF021916908373FFFFFFFFFFFFFFFFFFFF",
+	"signature": "A9CA1074F42952231915467A9E549E753A0EB3CB5F61CC4B29521F21646D3BAA758BB617652133C53B722988D75AF8FE7B15E8548DDA7B402D18F254FB5E040F",
+	"work": "e8274dc09bd9da12"
 })%%%";
 
 char const * live_genesis_data_QN1 = R"%%%({
-		"type": "state",
-		"account": "qlc_1uudbhpenjr1ii3k4ah9kax8f5f1qh3tt9qirjkj9mghew61qkfibw4haxtc",
-		"previous": "0000000000000000000000000000000000000000000000000000000000000000",
-		"representative": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
-		"balance": "70000000000000000",
-		"link": "6F6B4BECCA470084032121E7923A668DA0BBC3AD1EF0C46513CDCF67080BC9B0",
-		"link_as_account": "qlc_1uudbhpenjr1ii3k4ah9kax8f5f1qh3tt9qirjkj9mghew61qkfibw4haxtc",
-		"token": "E66E8CAD20394B3D7FA984D07CC500829AD36B69005E98F45348D98C37BF8EDC",
-		"signature": "3A8FF15030EB202FA10A2569C9596557E2A8DD2BA608B35301DB46574BFEE2D7D11D5DB23AC728B456A5227C54D3068AC0337F5E254CAB3DF3C16CA78FA9F407",
-		"work": "a219f25924fe179c"
+	"type": "state",
+	"account": "qlc_1uudbhpenjr1ii3k4ah9kax8f5f1qh3tt9qirjkj9mghew61qkfibw4haxtc",
+	"previous": "0000000000000000000000000000000000000000000000000000000000000000",
+	"representative": "qlc_3oftfjxu9x9pcjh1je3xfpikd441w1wo313qjc6ie1es5aobwed5x4pjojic",
+	"balance": "70000000000000000",
+	"link": "6F6B4BECCA470084032121E7923A668DA0BBC3AD1EF0C46513CDCF67080BC9B0",
+	"link_as_account": "qlc_1uudbhpenjr1ii3k4ah9kax8f5f1qh3tt9qirjkj9mghew61qkfibw4haxtc",
+	"token": "E66E8CAD20394B3D7FA984D07CC500829AD36B69005E98F45348D98C37BF8EDC",
+	"signature": "3A8FF15030EB202FA10A2569C9596557E2A8DD2BA608B35301DB46574BFEE2D7D11D5DB23AC728B456A5227C54D3068AC0337F5E254CAB3DF3C16CA78FA9F407",
+	"work": "a219f25924fe179c"
 })%%%";
 
 //QLINK:增加smart contract block QN1的初始信息
@@ -112,7 +112,7 @@ char const * live_genesis_data_QN2 = R"%%%({
 	"type": "state",
     "account": "qlc_3s1agkbw6osftnodbcu9otawgdhz6q74xzpgsu641qzjgs8qdqfujim3z7ii",
     "previous": "0000000000000000000000000000000000000000000000000000000000000000",
-    "representative": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
+    "representative": "qlc_3oftfjxu9x9pcjh1je3xfpikd441w1wo313qjc6ie1es5aobwed5x4pjojic",
 	"balance": "50000000000000000",
     "link": "E4087493C2572DD52AB4AB67AE91C72DFF25CA2EFECECEC8205FF1764D75DDBB",
     "link_as_account": "qlc_3s1agkbw6osftnodbcu9otawgdhz6q74xzpgsu641qzjgs8qdqfujim3z7ii",
@@ -136,7 +136,7 @@ char const * live_genesis_data_QN3 = R"%%%({
     "type": "state",
     "account": "qlc_1dtjuwiibgq7n5zcockqdyfgap7egfbxzqw8ygbtjn5aqffwxccxensu53i8",
     "previous": "0000000000000000000000000000000000000000000000000000000000000000",
-    "representative": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
+    "representative": "qlc_3oftfjxu9x9pcjh1je3xfpikd441w1wo313qjc6ie1es5aobwed5x4pjojic",
 	"balance": "80000000000000000",
     "link": "2F51DF2104BAE5A0FEAAAA575F9AE458AC7353DFDF86F393A8D068BB5BCEA95D",
     "link_as_account": "qlc_1dtjuwiibgq7n5zcockqdyfgap7egfbxzqw8ygbtjn5aqffwxccxensu53i8",
@@ -160,7 +160,7 @@ char const * live_genesis_data_QN4 = R"%%%({
 	"type": "state",
     "account": "qlc_3uq446hur8j7rgqu1bu1phyxb8gk3kkihqp3aqjghyg1hagsq8sizm4n7596",
     "previous": "0000000000000000000000000000000000000000000000000000000000000000",
-    "representative": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
+    "representative": "qlc_3oftfjxu9x9pcjh1je3xfpikd441w1wo313qjc6ie1es5aobwed5x4pjojic",
 	"balance": "90000000000000000",
     "link": "EEE2111FBC1A25C3AFB02760B3FDD499D20CA507DEC145E2E7F9C07A1D9B9B30",
     "link_as_account": "qlc_3uq446hur8j7rgqu1bu1phyxb8gk3kkihqp3aqjghyg1hagsq8sizm4n7596",
@@ -186,7 +186,7 @@ char const * live_genesis_data_QN5 = R"%%%({
 	"type": "state",
     "account": "qlc_1yuh366sczsfdekt183pp7b9d8gztj4mg3bshsyam7mxxrmy4nn89638o3me",
     "previous": "0000000000000000000000000000000000000000000000000000000000000000",
-    "representative": "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5",
+    "representative": "qlc_3oftfjxu9x9pcjh1je3xfpikd441w1wo313qjc6ie1es5aobwed5x4pjojic",
     "balance": "40000000000000000",
     "link": "7B6F0909957F2D5B25A01836B1527599DFD4453705397E7C89967DEE27E15286",
     "link_as_account": "qlc_1yuh366sczsfdekt183pp7b9d8gztj4mg3bshsyam7mxxrmy4nn89638o3me",
@@ -218,7 +218,7 @@ public:
 	rai_test_genesis (test_genesis_data),
 	rai_beta_genesis (beta_genesis_data),
 	rai_live_genesis (live_genesis_data),
-	chain_token_type ("3DA3D41A552B0135008A776EBBA7225E7773DBF867D86B9CD8FB650D6BAAD5DB"),
+	chain_token_type ("125998E086F7011384F89554676B69FCD86769642080CE7EED4A8AA83EF58F36"),
 	chain_token_type_QN1 ("E66E8CAD20394B3D7FA984D07CC500829AD36B69005E98F45348D98C37BF8EDC"),
 	chain_token_type_QN2 ("3A938337C8B9F6BA8A6C94F3C53C02815E574E2BC2DCEC3EA2B60E67154FFECA"),
 	chain_token_type_QN3 ("9A4171BAA9133AFB9F8B77848A36592465A680375C8591E1EC7ADBB980C189F1"),
