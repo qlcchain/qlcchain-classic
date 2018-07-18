@@ -830,7 +830,7 @@ void rai::rpc_handler::accounts_frontiers ()
 		}
 		else
 		{
-			error_response (response, "Bad account number");
+			// error_response (response, "Bad account number");
 		}
 	}
 	response_l.add_child ("frontiers", frontiers);
