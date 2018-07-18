@@ -23,7 +23,7 @@ RUN mkdir /tmp/build && \
     echo ${NETWORK} > /etc/qlc-network
 
 FROM ubuntu:16.04
-EXPOSE 29734/udp 29735
+EXPOSE 29734/udp 29734 29735
 COPY --from=builder /tmp/build/qlc_node /usr/bin
 COPY --from=builder /etc/qlc-network /etc
 COPY docker/node/entry.sh /entry.sh
