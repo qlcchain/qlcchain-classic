@@ -265,13 +265,12 @@ public:
 	rai::block_hash chain_token_type_QN4;
 	rai::block_hash chain_token_type_QN5;
 	std::unordered_map<rai::block_hash, std::list<std::string>> sc_infos = {
-		{ chain_token_type, { "Root_Token", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QLC" } },
-		// FIXME: 生成合约代码
-		{ chain_token_type_QN1, { "QN1", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QN1" } },
-		{ chain_token_type_QN2, { "QN2", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QN2" } },
-		{ chain_token_type_QN3, { "QN3", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QN3" } },
-		{ chain_token_type_QN4, { "QN4", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QN4" } },
-		{ chain_token_type_QN5, { "QN5", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QN5" } },
+		{ chain_token_type, { "Root_Token", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QLC", "60000000000000000", "2018-05-18 12:34.59" } },
+		{ chain_token_type_QN1, { "QN1", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QN1", "70000000000000000", "2018-07-11 21:00.00" } },
+		{ chain_token_type_QN2, { "QN2", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QN2", "50000000000000000", "2018-07-11 21:00.00" } },
+		{ chain_token_type_QN3, { "QN3", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QN3", "80000000000000000", "2018-07-11 21:00.00" } },
+		{ chain_token_type_QN4, { "QN4", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QN4", "90000000000000000", "2018-07-11 21:00.00" } },
+		{ chain_token_type_QN5, { "QN5", rai::Mqlc_ratio.convert_to<std::string> (), "8", "QN5", "40000000000000000", "2018-07-11 21:00.00" } },
 	};
 	std::unordered_map<rai::account, std::list<std::string>> genesis_blocks = {
 		{ rai_live_account, { live_genesis_data, smart_contrac_block_genesis_data } },
