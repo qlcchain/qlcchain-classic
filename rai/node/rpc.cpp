@@ -2550,6 +2550,7 @@ void rai::rpc_handler::pending ()
 						if (source)
 						{
 							boost::property_tree::ptree pending_tree;
+							pending_tree.put ("token", rai::get_sc_info_name (info.token_type));
 							pending_tree.put ("amount", info.amount.number ().convert_to<std::string> ());
 							pending_tree.put ("source", info.source.to_account ());
 							peers_l.add_child (key.hash.to_string (), pending_tree);
