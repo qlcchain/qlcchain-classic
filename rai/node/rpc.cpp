@@ -383,8 +383,14 @@ void rai::rpc_handler::account_info ()
 				rai::uint128_union (info.balance).encode_dec (balance);
 				info_l.put ("balance", balance);
 				info_l.put ("modified_timestamp", std::to_string (info.modified));
-				info_l.put ("block_count", std::to_string (info.block_count));
-				info_l.put ("token", rai::get_sc_info_name (info.token_type));
+				auto sc_info = rai::get_sc_info (info.token_type);
+                info_l.put ("token", *std::next (sc_info.begin (), 0));
+                info_l.put ("token_hash", info.token_type.to_string ());
+				//				token.put ("ratio", *std::next (sc_info.begin (), 1));
+				//				token.put ("precision", *std::next (sc_info.begin (), 2));
+                info_l.put ("symbol", *std::next (sc_info.begin (), 3));
+				//				token.put ("total_supply", *std::next (sc_info.begin (), 4));
+				//				token.put ("create_at", *std::next (sc_info.begin (), 5));
 				if (representative)
 				{
 					auto block (node.store.block_get (transaction, info.rep_block));
@@ -893,6 +899,7 @@ void rai::rpc_handler::accounts_pending ()
 								if (source)
 								{
 									boost::property_tree::ptree pending_tree;
+
 									pending_tree.put ("token", rai::get_sc_info_name (info.token_type));
 									pending_tree.put ("amount", info.amount.number ().convert_to<std::string> ());
 									pending_tree.put ("source", info.source.to_account ());
@@ -2550,7 +2557,15 @@ void rai::rpc_handler::pending ()
 						if (source)
 						{
 							boost::property_tree::ptree pending_tree;
-							pending_tree.put ("token", rai::get_sc_info_name (info.token_type));
+							auto sc_info = rai::get_sc_info (info.token_type);
+                            pending_tree.put ("token", *std::next (sc_info.begin (), 0));
+                            pending_tree.put ("token_hash", info.token_type.to_string ());
+//							token.put ("ratio", *std::next (sc_info.begin (), 1));
+//							token.put ("precision", *std::next (sc_info.begin (), 2));
+                            pending_tree.put ("symbol", *std::next (sc_info.begin (), 3));
+//							token.put ("total_supply", *std::next (sc_info.begin (), 4));
+//							token.put ("create_at", *std::next (sc_info.begin (), 5));
+//							pending_tree.put ("token", rai::get_sc_info_name (info.token_type));
 							pending_tree.put ("amount", info.amount.number ().convert_to<std::string> ());
 							pending_tree.put ("source", info.source.to_account ());
 							peers_l.add_child (key.hash.to_string (), pending_tree);
