@@ -243,9 +243,11 @@ void rai::rpc_handler::account_balance ()
 			{
 				boost::property_tree::ptree balance_l;
 				auto balance (node.balance_pending (info.account, info.token_type));
-				balance_l.put ("token", rai::get_sc_info_name (info.token_type));
+				auto sc_info = rai::get_sc_info (info.token_type);
+				balance_l.put ("token", *std::next (sc_info.begin (), 0));
 				balance_l.put ("balance", balance.first.convert_to<std::string> ());
 				balance_l.put ("pending", balance.second.convert_to<std::string> ());
+				balance_l.put ("symbol", *std::next (sc_info.begin (), 3));
 				balances.push_back (std::make_pair ("", balance_l));
 			}
 			response_l.add_child ("balances", balances);
