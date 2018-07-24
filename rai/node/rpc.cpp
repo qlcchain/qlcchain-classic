@@ -415,6 +415,10 @@ void rai::rpc_handler::account_info ()
 			response_l.add_child ("account_infos", account_infos);
 			response (response_l);
 		}
+		else
+		{
+			error_response (response, "Account does not exit.");
+		}
 	}
 	else
 	{
@@ -752,8 +756,12 @@ void rai::rpc_handler::accounts_balances ()
 			}
 			else
 			{
-				error_response (response, "Bad account number");
+				//				error_response (response, "Account does not exit");
 			}
+		}
+		else
+		{
+			//            error_response (response, "Bad account number");
 		}
 	}
 	response_l.add_child ("balances", balances);
@@ -1981,49 +1989,47 @@ void rai::rpc_handler::account_history_topn ()
 		{
 			boost::property_tree::ptree response_l;
 			boost::property_tree::ptree history;
-			if (!error)
+
+			response_l.put ("account", account_text);
+
+			std::vector<rai::account_info> infos;
+			if (!node.store.accounts_get (transaction, account, infos))
 			{
-				response_l.put ("account", account_text);
-
-				std::vector<rai::account_info> infos;
-				if (!node.store.accounts_get (transaction, account, infos))
+				for (auto info : infos)
 				{
-					for (auto info : infos)
+					uint64_t token_count_limit = count;
+					hash = node.ledger.latest (transaction, info.account, info.token_type);
+					auto block (node.store.block_get (transaction, hash));
+
+					while (block != nullptr && token_count_limit > 0)
 					{
-						uint64_t token_count_limit = count;
-						hash = node.ledger.latest (transaction, info.account, info.token_type);
-						auto block (node.store.block_get (transaction, hash));
-
-						while (block != nullptr && token_count_limit > 0)
+						boost::property_tree::ptree entry;
+						history_visitor visitor (*this, output_raw, transaction, entry, hash);
+						block->visit (visitor);
+						if (!entry.empty ())
 						{
-							boost::property_tree::ptree entry;
-							history_visitor visitor (*this, output_raw, transaction, entry, hash);
-							block->visit (visitor);
-							if (!entry.empty ())
+							entry.put ("hash", hash.to_string ());
+							if (output_raw)
 							{
-								entry.put ("hash", hash.to_string ());
-								if (output_raw)
-								{
-									entry.put ("work", rai::to_string_hex (block->block_work ()));
-									entry.put ("signature", block->block_signature ().to_string ());
-								}
-								history.push_back (std::make_pair ("", entry));
+								entry.put ("work", rai::to_string_hex (block->block_work ()));
+								entry.put ("signature", block->block_signature ().to_string ());
 							}
-							--token_count_limit;
-
-							hash = block->previous ();
-							block = node.store.block_get (transaction, hash);
+							history.push_back (std::make_pair ("", entry));
 						}
+						--token_count_limit;
+
+						hash = block->previous ();
+						block = node.store.block_get (transaction, hash);
 					}
 				}
+			}
 
-				response_l.add_child ("history", history);
-				response (response_l);
-			}
-			else
-			{
-				error_response (response, "Invalid count limit");
-			}
+			response_l.add_child ("history", history);
+			response (response_l);
+		}
+		else
+		{
+			error_response (response, "Invalid count limit");
 		}
 	}
 }
