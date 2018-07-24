@@ -882,47 +882,41 @@ void rai::rpc_handler::accounts_pending ()
 		if (!account.decode_account (account_text))
 		{
 			boost::property_tree::ptree peers_l;
-			std::vector<rai::account_info> infos;
-			if (!node.store.accounts_get (transaction, account, infos))
+			rai::account end (account.number () + 1);
+			for (auto i (node.store.pending_begin (transaction, rai::pending_key (account, 0))), n (node.store.pending_begin (transaction, rai::pending_key (end, 0))); i != n && peers_l.size () < count; ++i)
 			{
-				for (auto & info : infos)
+				rai::pending_key key (i->first);
+				auto value (i->second);
+				if (threshold.is_zero () && !source)
 				{
-					rai::account end (info.open_block.number () + 1);
-					for (auto i (node.store.pending_begin (transaction, rai::pending_key (info.open_block, 0))), n (node.store.pending_begin (transaction, rai::pending_key (end, 0))); i != n && peers_l.size () < count; ++i)
+					boost::property_tree::ptree entry;
+					entry.put ("", key.hash.to_string ());
+					peers_l.push_back (std::make_pair ("", entry));
+				}
+				else
+				{
+					rai::pending_info info (i->second);
+					if (info.amount.number () >= threshold.number ())
 					{
-						rai::pending_key key (i->first);
-						if (threshold.is_zero () && !source)
+						if (source)
 						{
-							boost::property_tree::ptree entry;
-							entry.put ("", key.hash.to_string ());
-							peers_l.push_back (std::make_pair ("", entry));
+							boost::property_tree::ptree pending_tree;
+							auto sc_info = rai::get_sc_info (info.token_type);
+							pending_tree.put ("token", *std::next (sc_info.begin (), 0));
+							pending_tree.put ("token_hash", info.token_type.to_string ());
+							pending_tree.put ("symbol", *std::next (sc_info.begin (), 3));
+							pending_tree.put ("amount", info.amount.number ().convert_to<std::string> ());
+							pending_tree.put ("source", info.source.to_account ());
+							peers_l.add_child (key.hash.to_string (), pending_tree);
 						}
 						else
 						{
-							rai::pending_info info (i->second);
-							if (info.amount.number () >= threshold.number ())
-							{
-								if (source)
-								{
-									boost::property_tree::ptree pending_tree;
-									auto sc_info = rai::get_sc_info (info.token_type);
-                                    pending_tree.put ("token", *std::next (sc_info.begin (), 0));
-                                    pending_tree.put ("token_hash", info.token_type.to_string ());
-                                    pending_tree.put ("symbol", *std::next (sc_info.begin (), 3));
-									pending_tree.put ("amount", info.amount.number ().convert_to<std::string> ());
-									pending_tree.put ("source", info.source.to_account ());
-									peers_l.add_child (key.hash.to_string (), pending_tree);
-								}
-								else
-								{
-									peers_l.put (key.hash.to_string (), info.amount.number ().convert_to<std::string> ());
-								}
-							}
+							peers_l.put (key.hash.to_string (), info.amount.number ().convert_to<std::string> ());
 						}
 					}
-					pending.add_child (account.to_account (), peers_l);
 				}
 			}
+			pending.add_child (account.to_account (), peers_l);
 		}
 		else
 		{
@@ -2545,42 +2539,41 @@ void rai::rpc_handler::pending ()
 		const bool source = request.get<bool> ("source", false);
 		boost::property_tree::ptree response_l;
 		boost::property_tree::ptree peers_l;
+		rai::transaction transaction (node.store.environment, nullptr, false);
+		rai::account end (account.number () + 1);
+		for (auto i (node.store.pending_begin (transaction, rai::pending_key (account, 0))), n (node.store.pending_begin (transaction, rai::pending_key (end, 0))); i != n && peers_l.size () < count; ++i)
 		{
-			rai::transaction transaction (node.store.environment, nullptr, false);
-			rai::account end (account.number () + 1);
-			for (auto i (node.store.pending_begin (transaction, rai::pending_key (account, 0))), n (node.store.pending_begin (transaction, rai::pending_key (end, 0))); i != n && peers_l.size () < count; ++i)
+			rai::pending_key key (i->first);
+			if (threshold.is_zero () && !source)
 			{
-				rai::pending_key key (i->first);
-				if (threshold.is_zero () && !source)
+				boost::property_tree::ptree entry;
+				entry.put ("", key.hash.to_string ());
+				peers_l.push_back (std::make_pair ("", entry));
+			}
+			else
+			{
+				rai::pending_info info (i->second);
+				if (info.amount.number () >= threshold.number ())
 				{
-					boost::property_tree::ptree entry;
-					entry.put ("", key.hash.to_string ());
-					peers_l.push_back (std::make_pair ("", entry));
-				}
-				else
-				{
-					rai::pending_info info (i->second);
-					if (info.amount.number () >= threshold.number ())
+					if (source)
 					{
-						if (source)
-						{
-							boost::property_tree::ptree pending_tree;
-							auto sc_info = rai::get_sc_info (info.token_type);
-							pending_tree.put ("token", *std::next (sc_info.begin (), 0));
-							pending_tree.put ("token_hash", info.token_type.to_string ());
-							pending_tree.put ("symbol", *std::next (sc_info.begin (), 3));
-							pending_tree.put ("amount", info.amount.number ().convert_to<std::string> ());
-							pending_tree.put ("source", info.source.to_account ());
-							peers_l.add_child (key.hash.to_string (), pending_tree);
-						}
-						else
-						{
-							peers_l.put (key.hash.to_string (), info.amount.number ().convert_to<std::string> ());
-						}
+						boost::property_tree::ptree pending_tree;
+						auto sc_info = rai::get_sc_info (info.token_type);
+						pending_tree.put ("token", *std::next (sc_info.begin (), 0));
+						pending_tree.put ("token_hash", info.token_type.to_string ());
+						pending_tree.put ("symbol", *std::next (sc_info.begin (), 3));
+						pending_tree.put ("amount", info.amount.number ().convert_to<std::string> ());
+						pending_tree.put ("source", info.source.to_account ());
+						peers_l.add_child (key.hash.to_string (), pending_tree);
+					}
+					else
+					{
+						peers_l.put (key.hash.to_string (), info.amount.number ().convert_to<std::string> ());
 					}
 				}
 			}
 		}
+
 		response_l.add_child ("blocks", peers_l);
 		response (response_l);
 	}
