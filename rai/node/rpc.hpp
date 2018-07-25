@@ -368,6 +368,8 @@ public:
 	void smart_contract_block ();
 	// fetch token infos
 	void tokens ();
+	// transactions count
+	void transactions_count ();
 	std::string body;
 	rai::node & node;
 	rai::rpc & rpc;

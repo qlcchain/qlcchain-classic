@@ -1142,6 +1142,15 @@ void rai::rpc_handler::block_count ()
 	response (response_l);
 }
 
+void rai::rpc_handler::transactions_count ()
+{
+	rai::transaction transaction (node.store.environment, nullptr, false);
+	boost::property_tree::ptree response_l;
+	response_l.put ("count", std::to_string (node.store.block_count (transaction).sum () - rai::map_sc_info.size ()));
+	response_l.put ("unchecked", std::to_string (node.store.unchecked_count (transaction)));
+	response (response_l);
+}
+
 void rai::rpc_handler::block_count_type ()
 {
 	rai::transaction transaction (node.store.environment, nullptr, false);
@@ -5438,6 +5447,10 @@ void rai::rpc_handler::process_request ()
 		else if (action == "tokens")
 		{
 			tokens ();
+		}
+		else if (action == "transactions_count")
+		{
+			transactions_count ();
 		}
 		else
 		{
