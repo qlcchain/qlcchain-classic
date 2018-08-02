@@ -827,7 +827,7 @@ lmdb_max_dbs (128)
 			break;
 		case rai::rai_networks::rai_live_network:
 			//preconfigured_peers.push_back ("rai.raiblocks.net");
-			preconfigured_peers.push_back ("qlcChain.online");
+			preconfigured_peers.push_back ("node2.qlcChain.online");
 			preconfigured_peers.push_back ("node1.qlcChain.online");
 			preconfigured_representatives.push_back (rai::account ("D5BA6C7BB3F4F6545E08B03D6DA1258840E0395080378A890601991A2A9E3163"));
 #if 0
