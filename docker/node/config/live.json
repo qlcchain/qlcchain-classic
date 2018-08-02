@@ -12,7 +12,7 @@
         "version": "12",
         "peering_port": "29734",
         "bootstrap_fraction_numerator": "1",
-        "receive_minimum": "1000000000000000000000000",
+        "receive_minimum": "100",
         "logging": {
             "version": "3",
             "ledger": "false",
@@ -36,13 +36,13 @@
         },
         "work_peers": "",
         "preconfigured_peers": [
-            "qlcChain.online",
+            "node2.qlcChain.online",
             "node1.qlcChain.online"
         ],
         "preconfigured_representatives": [
-            "qlc_16s9kn7qmjx3jjiw6td7wbth95ifjjirsqdkqady15jh8scww4urw6gg8zd5"
+            "qlc_3oftfjxu9x9pcjh1je3xfpikd441w1wo313qjc6ie1es5aobwed5x4pjojic"
         ],
-        "online_weight_minimum": "60000000000000000000000000000000000000",
+        "online_weight_minimum": "6000000000000000",
         "online_weight_quorum": "50",
         "password_fanout": "1024",
         "io_threads": "8",
