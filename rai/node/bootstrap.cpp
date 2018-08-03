@@ -989,7 +989,7 @@ void rai::bootstrap_attempt::handle_smart_block ()
 		node->alarm.add (std::chrono::steady_clock::now () + std::chrono::seconds (20), [this_w]() {
 			if (auto this_l = this_w.lock ())
 			{
-				BOOST_LOG (this_l->node->log) << boost::str (boost::format ("alarm handle sc bloc run........"));
+				//				BOOST_LOG (this_l->node->log) << boost::str (boost::format ("alarm handle sc bloc run........"));
 				this_l->handle_smart_block ();
 			}
 		});
