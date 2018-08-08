@@ -8,9 +8,11 @@
 #include <future>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <thread>
 #include <unordered_set>
 
+#include <boost/exception/all.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/utility/setup/console.hpp>
@@ -827,8 +829,8 @@ lmdb_max_dbs (128)
 			break;
 		case rai::rai_networks::rai_live_network:
 			//preconfigured_peers.push_back ("rai.raiblocks.net");
-			preconfigured_peers.push_back ("node2.qlcChain.online");
-			preconfigured_peers.push_back ("node1.qlcChain.online");
+			preconfigured_peers.push_back ("node2.qlcchain.online");
+			preconfigured_peers.push_back ("node1.qlcchain.online");
 			preconfigured_representatives.push_back (rai::account ("D5BA6C7BB3F4F6545E08B03D6DA1258840E0395080378A890601991A2A9E3163"));
 #if 0
 			preconfigured_representatives.push_back (rai::account ("A30E0A32ED41C8607AA9212843392E853FCBCB4E7CB194E35C94F07F91DE59EF"));
@@ -1607,6 +1609,11 @@ stats (config.stat_config)
 										//req->prepare (*req);
 										//boost::beast::http::prepare(req);
 										req->prepare_payload ();
+										if (node_l->config.logging.callback_logging ())
+										{
+											BOOST_LOG (node_l->log) << boost::str (
+											boost::format ("Callback write %1%:%2% <<< %3%") % address % port % *body);
+										}
 										boost::beast::http::async_write (*sock, *req, [node_l, sock, address, port, req](boost::system::error_code const & ec, size_t bytes_transferred) {
 											if (!ec)
 											{
@@ -1617,6 +1624,12 @@ stats (config.stat_config)
 													{
 														if (resp->result () == boost::beast::http::status::ok)
 														{
+															if (node_l->config.logging.callback_logging ())
+															{
+																BOOST_LOG (node_l->log) << boost::str (boost::format (
+																                                       "Callback to %1%:%2% successful.")
+																% address % port);
+															}
 														}
 														else
 														{
@@ -2666,7 +2679,13 @@ void rai::node::process_confirmed (std::shared_ptr<rai::block> block_a)
 		{
 			pending_account = send->hashables.destination;
 		}
+
 		observers.blocks (block_a, account, amount, is_state_send);
+		if (config.logging.vote_logging ())
+		{
+			BOOST_LOG (log) << boost::str (
+			boost::format ("process_confirmed: hash %1% account: %2%, amount: %3%") % hash.to_string () % account.to_string () % amount.convert_to<std::string> ());
+		}
 		if (amount > 0)
 		{
 			observers.account_balance (account, false);
@@ -2674,6 +2693,14 @@ void rai::node::process_confirmed (std::shared_ptr<rai::block> block_a)
 			{
 				observers.account_balance (pending_account, true);
 			}
+		}
+	}
+	else
+	{
+		if (config.logging.vote_logging ())
+		{
+			BOOST_LOG (log)
+			<< boost::str (boost::format ("process_confirmed: hash %1% does not exist.") % hash.to_string ());
 		}
 	}
 }
@@ -2779,6 +2806,11 @@ void rai::online_reps::recalculate_stake ()
 rai::uint128_t rai::online_reps::online_stake ()
 {
 	std::lock_guard<std::mutex> lock (mutex);
+	if (node.config.logging.vote_logging ())
+	{
+		BOOST_LOG (node.log) << boost::str (
+		boost::format ("online_stake: online_stake_total: %1%, online_weight_minimum: %2%") % online_stake_total.convert_to<std::string> () % node.config.online_weight_minimum.number ());
+	}
 	return std::max (online_stake_total, node.config.online_weight_minimum.number ());
 }
 
@@ -3222,6 +3254,7 @@ void rai::election::confirm_once (MDB_txn * transaction_a)
 {
 	if (!confirmed.exchange (true))
 	{
+		BOOST_LOG (node.log) << boost::str (boost::format ("confirmed exchange: %1%->%2%") % &confirmed % confirmed.load ());
 		auto winner_l (status.winner);
 		auto node_l (node.shared ());
 		auto confirmation_action_l (confirmation_action);
@@ -3229,6 +3262,14 @@ void rai::election::confirm_once (MDB_txn * transaction_a)
 			node_l->process_confirmed (winner_l);
 			confirmation_action_l (winner_l);
 		});
+	}
+	else
+	{
+		if (node.config.logging.vote_logging ())
+		{
+			BOOST_LOG (node.log)
+			<< boost::str (boost::format ("confirmed exchange failed: %1%->%2%") % &confirmed % confirmed.load ());
+		}
 	}
 }
 
@@ -3239,7 +3280,12 @@ bool rai::election::have_quorum (rai::tally_t const & tally_a)
 	++i;
 	auto second (i != tally_a.end () ? i->first : 0);
 	auto delta_l (node.delta ());
-	auto result (tally_a.begin ()->first > (second + delta_l));
+	auto result (first > (second + delta_l));
+	if (node.config.logging.vote_logging ())
+	{
+		BOOST_LOG (node.log) << boost::str (
+		boost::format ("have_quorum: delta_l: %1%, first: %2%, second: %3%, result: %4%") % delta_l.convert_to<std::string> () % first.convert_to<std::string> () % second.convert_to<std::string> () % result);
+	}
 	return result;
 }
 
@@ -3254,6 +3300,11 @@ void rai::election::confirm_if_quorum (MDB_txn * transaction_a)
 	for (auto & i : tally_l)
 	{
 		sum += i.first;
+	}
+	if (node.config.logging.vote_logging ())
+	{
+		BOOST_LOG (node.log) << boost::str (
+		boost::format ("%1%: sum: %2%, online_weight_minimum: %3%") % status.winner->root ().to_string () % sum.convert_to<std::string> () % node.config.online_weight_minimum.to_string_dec ());
 	}
 	if (sum >= node.config.online_weight_minimum.number () && !(*block_l == *status.winner))
 	{
@@ -3287,6 +3338,12 @@ bool rai::election::vote (std::shared_ptr<rai::vote> vote_a)
 	auto replay (false);
 	auto supply (node.online_reps.online_stake ());
 	auto weight (node.ledger.weight (transaction, vote_a->account));
+	auto hash (vote_a->block->hash ().to_string ());
+	if (node.config.logging.vote_logging ())
+	{
+		BOOST_LOG (node.log) << boost::str (
+		boost::format ("%1%: supply: %2%, weight:%3%, flag: %4%") % hash % supply.convert_to<std::string> () % weight.convert_to<std::string> () % (weight > supply / 1000));
+	}
 	if (rai::rai_network == rai::rai_networks::rai_test_network || weight > supply / 1000) // 0.1% or above
 	{
 		unsigned int cooldown;
@@ -3307,6 +3364,10 @@ bool rai::election::vote (std::shared_ptr<rai::vote> vote_a)
 		if (last_vote_it == last_votes.end ())
 		{
 			should_process = true;
+			if (node.config.logging.vote_logging ())
+			{
+				BOOST_LOG (node.log) << boost::str (boost::format ("%1%: first time to vote") % hash);
+			}
 		}
 		else
 		{
@@ -3321,7 +3382,15 @@ bool rai::election::vote (std::shared_ptr<rai::vote> vote_a)
 			else
 			{
 				replay = true;
+				if (node.config.logging.vote_logging ())
+				{
+					BOOST_LOG (node.log) << boost::str (boost::format ("%1%: replay") % hash);
+				}
 			}
+		}
+		if (node.config.logging.vote_logging ())
+		{
+			BOOST_LOG (node.log) << boost::str (boost::format ("%1%: should_process: %2%") % vote_a->block->hash ().to_string () % should_process);
 		}
 		if (should_process)
 		{
@@ -3519,6 +3588,7 @@ rai::thread_runner::thread_runner (boost::asio::io_service & service_a, unsigned
 			}
 			catch (...)
 			{
+				std::cout << boost::current_exception_diagnostic_information () << std::endl;
 				assert (false && "Unhandled service exception");
 			}
 		}));
