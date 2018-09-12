@@ -3,8 +3,7 @@
 </div>
 
 ---
-[![Build Status](https://travis-ci.org/nanocurrency/raiblocks.svg?branch=master)](https://travis-ci.org/nanocurrency/raiblocks)
-[![Build status](https://ci.appveyor.com/api/projects/status/uwdcxi87h2y6jx94/branch/master?svg=true)](https://ci.appveyor.com/project/argakiig/raiblocks/branch/master)
+[![Build Status](https://travis-ci.com/qlcchain/qlcchain-classic.svg?branch=master)](https://travis-ci.com/qlcchain/qlcchain-classic)
 ## What is QLC Chain?
 
 **[English](README.md)** **[中文](README_CN.md)**
